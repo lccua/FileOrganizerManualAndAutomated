@@ -65,12 +65,12 @@ class FileOrganizerModel:
         folder_path = QFileDialog.getExistingDirectory(None, "Select a folder", options=options)
 
         if self.is_automated:
-            selected_folders = selected_folder_paths_automated
+            self.selected_folders = self.selected_folder_paths_automated
         else:
-            selected_folders = selected_folder_paths_manual
+            self.selected_folders = self.selected_folder_paths_manual
 
         if folder_path:
-            if folder_path in selected_folders:
+            if folder_path in self.selected_folders:
                 # Display a warning message if the folder path is already selected
                 QMessageBox.warning(None, "Folder Already Selected", "This folder has already been selected.")
             else:
@@ -83,31 +83,31 @@ class FileOrganizerModel:
                 else:
                     # Add the folder path to the list
                     if self.is_automated:
-                        selected_folder_paths_automated.append(folder_path)
+                        self.selected_folder_paths_automated.append(folder_path)
 
                         # Update and add the selected folder to the list widget
-                        self.update_list_widget(listWidget, selected_folder_paths_automated)
+                        self.update_list_widget(listWidget, self.selected_folder_paths_automated)
 
 
                         self.idk_name_yet(treeWidget, excluded_tree)
 
                     else:
-                        selected_folder_paths_manual.append(folder_path)
+                        self.selected_folder_paths_manual.append(folder_path)
 
                         # Update and add the selected folder to the list widget
-                        self.update_list_widget(listWidget, selected_folder_paths_manual)
+                        self.update_list_widget(listWidget, self.selected_folder_paths_manual)
 
                         # Categorize the files
-                        self.categorize_files(treeWidget, selected_folder_paths_manual)
+                        self.categorize_files(treeWidget, self.selected_folder_paths_manual)
 
     def delete_selected_folder(self,listWidget, treeWidget, excluded_tree):
         global selected_folder_paths_automated, selected_folder_paths_manual
         selected_items = listWidget.selectedItems()
 
         if self.is_automated:
-            selected_folder_paths = selected_folder_paths_automated
+            selected_folder_paths = self.selected_folder_paths_automated
         else:
-            selected_folder_paths = selected_folder_paths_manual
+            selected_folder_paths = self.selected_folder_paths_manual
 
         if selected_items:
             selected_item = selected_items[0].text()
@@ -121,9 +121,9 @@ class FileOrganizerModel:
                 listWidget.addItems(selected_folder_paths)  # Add the modified folder paths
 
                 # Delete the folder from the categorized_files dictionary
-                for source_folder in list(categorized_files.keys()):
+                for source_folder in list(self.categorized_files.keys()):
                     if source_folder == selected_item:
-                        del categorized_files[source_folder]
+                        del self.categorized_files[source_folder]
 
         self.idk_name_yet(treeWidget, excluded_tree)
 
@@ -134,7 +134,7 @@ class FileOrganizerModel:
         depth = self.get_item_depth(selected_item)
 
         # Initialize a reference to the current level of the nested dictionary
-        current_level = excluded_files
+        current_level = self.excluded_files
 
         if depth == 0:
             folder_path = selected_item.text(0)
@@ -170,7 +170,7 @@ class FileOrganizerModel:
                 if not current_level[folder_path]:
                     current_level.pop(folder_path)
 
-        print(excluded_files)
+        print(self.excluded_files)
         excluded_tree.clear()
         self.idk_name_yet(included_tree, excluded_tree)
 
@@ -183,7 +183,7 @@ class FileOrganizerModel:
         depth = self.get_item_depth(selected_item)
 
         # Initialize a reference to the current level of the nested dictionary
-        current_level = excluded_files
+        current_level = self.excluded_files
 
         if depth == 0:
             folder_path = selected_item.text(0)
@@ -236,7 +236,7 @@ class FileOrganizerModel:
             if file_type not in current_level[folder_path][category]:
                 current_level[folder_path][category][file_type] = []
 
-        print(excluded_files)
+        print(self.excluded_files)
         self.idk_name_yet(included_tree, excluded_tree)
 
     def update_list_widget(self,listWidget, selected_folder_paths):
@@ -249,17 +249,17 @@ class FileOrganizerModel:
         global excluded_files, categorized_files
 
         excluded_tree.clear()
-        self.populate_tree(excluded_tree, excluded_files)
+        self.populate_tree(excluded_tree, self.excluded_files)
 
-        self.categorize_files(included_tree, selected_folder_paths_automated)
+        self.categorize_files(included_tree, self.selected_folder_paths_automated)
 
-        if len(categorized_files) != 0:
-            self.delete_items_from_dict(categorized_files, excluded_files)
+        if len(self.categorized_files) != 0:
+            self.delete_items_from_dict(self.categorized_files, self.excluded_files)
 
         included_tree.clear()
-        self.populate_tree(included_tree, categorized_files)
+        self.populate_tree(included_tree, self.categorized_files)
 
-        print(categorized_files)
+        print(self.categorized_files)
 
     def populate_tree(self, treeWidget, categorized_files_dictionary, is_browse_window=None, item=None):
         # Loop through keys and values in the categorized_files_dictionary
@@ -333,24 +333,24 @@ class FileOrganizerModel:
                     # Look for the file extension in the dictionary file_categories
                     for category, extensions in FILE_CATEGORIES.items():
                         if file_extension in extensions:
-                            if source_folder not in categorized_files:
+                            if source_folder not in self.categorized_files:
                                 # Create an entry for the source folder in the categorized files dictionary
                                 # with an empty dictionary as its value
-                                categorized_files[source_folder] = {}
-                            if category not in categorized_files[source_folder]:
+                                self.categorized_files[source_folder] = {}
+                            if category not in self.categorized_files[source_folder]:
                                 # Create an entry for the category within the source folder in the categorized files dictionary
                                 # with an empty dictionary as its value
-                                categorized_files[source_folder][category] = {}
-                            if file_extension not in categorized_files[source_folder][category]:
+                                self.categorized_files[source_folder][category] = {}
+                            if file_extension not in self.categorized_files[source_folder][category]:
                                 # Create an empty list with the file extension as the key
-                                categorized_files[source_folder][category][file_extension] = []
+                                self.categorized_files[source_folder][category][file_extension] = []
                             # Add the file to the file extension list
-                            categorized_files[source_folder][category][file_extension].append(filename)
+                            self.categorized_files[source_folder][category][file_extension].append(filename)
 
         treeWidget.clear()
 
         # Populate the tree widget with the categorized files and folders stored in the categorized_files dictionary
-        self.populate_tree(treeWidget, categorized_files)
+        self.populate_tree(treeWidget, self.categorized_files)
 
     def get_item_depth(self,tree_item):
         depth = 0

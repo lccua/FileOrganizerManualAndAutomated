@@ -17,6 +17,8 @@ class AutomatedFileOrganizerController:
 
 
         self.checkbox = None
+        self.model.is_automated = True
+
 
         self.check_automation_toggle()
         self.create_day_checkboxes()
