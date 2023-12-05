@@ -17,10 +17,9 @@ import json
 from constants import FILE_CATEGORIES
 
 
-
-
-
 class FileOrganizerModel:
+
+    # VARIABLES
     is_automated = None
     is_toggled = False
 
@@ -47,12 +46,12 @@ class FileOrganizerModel:
 
     day_checkboxes_dict = {}
 
-    # try to use these more??????????????
-    def get_excluded_tree(tree):
+    # AUTOMATED
+    def get_excluded_tree(self,tree):
         global excluded_tree
         excluded_tree = tree
 
-    def get_inlcuded_tree(tree):
+    def get_inlcuded_tree(self,tree):
         global included_tree
         included_tree = tree
 
@@ -438,6 +437,66 @@ class FileOrganizerModel:
 
         else:
             print("nothing needs to be organized today")
+
+    def get_selected_folder_paths_automated(self):
+        return self.selected_folder_paths_automated
+
+    # EXTENSION BROWSER
+    def toggle_select_all(self, list_widget):
+        list_widget.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
+        for index in range(list_widget.count()):
+            item = list_widget.item(index)
+            item.setSelected(True)
+        list_widget.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+
+    def merge_items_together(self, folder_list, items_tree):
+        global categorized_files, excluded_files
+
+        selected_folders = folder_list.selectedItems()
+
+        selected_item = items_tree.selectedItems()[0]
+
+        depth = self.get_item_depth(selected_item)
+
+        for folder in selected_folders:
+            selected_folder_name = folder.text()
+
+            # Initialize a reference to the current level of the nested dictionary
+            current_level = excluded_files
+
+            if depth == 0:
+                folder_path = selected_folder_name
+                category = selected_item.text(0)
+
+                if folder_path not in current_level:
+                    current_level[folder_path] = {}
+
+                if category not in current_level[folder_path]:
+                    current_level[folder_path][category] = {}
+
+                for i in range(selected_item.childCount()):
+                    child_item = selected_item.child(i)
+                    file_type = child_item.text(0)
+
+                    if file_type not in current_level[folder_path][category]:
+                        current_level[folder_path][category][file_type] = []
+
+
+            elif depth == 1:
+                folder_path = selected_folder_name
+                category = selected_item.parent().text(0)
+                file_type = selected_item.text(0)
+
+                if folder_path not in current_level:
+                    current_level[folder_path] = {}
+                if category not in current_level[folder_path]:
+                    current_level[folder_path][category] = {}
+                if file_type not in current_level[folder_path][category]:
+                    current_level[folder_path][category][file_type] = []
+
+        self.idk_name_yet(included_tree, excluded_tree)
+
+        print(excluded_files)
 
 
 

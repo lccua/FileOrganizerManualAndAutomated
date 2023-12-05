@@ -1,27 +1,39 @@
 from PyQt5 import QtGui, QtWidgets, QtCore
-from PyQt5.QtWidgets import QWidget, QLabel
+from PyQt5.QtWidgets import QWidget, QLabel, QMessageBox
+
+from controller.AutomatedOrganizerController import AutomatedFileOrganizerController
+
+from constants import *
+
 
 
 
 class AutomatedOrganizerView(QWidget):
     def __init__(self):
         super().__init__()
+        self.controller = AutomatedFileOrganizerController()
+
+        # variables
+        self.is_toggled = False
+        self.selected_days = []
+        self.day_checkboxes_dict = {}
+
+        # creates the layout
+        self.create_layout()
+
+        self.check_automation_toggle()
+        self.create_day_checkboxes()
+        self.set_automation_label_properties()
+        self.set_automation_button_properties()
+
+        self.connect_signals()
+
+    def create_layout(self):
 
         # Set the window title
         self.setWindowTitle('First Window')
         # Set the fixed size of the window
         self.setFixedSize(1221, 845)
-
-
-
-        self.create_layout()
-
-
-
-
-    def create_layout(self):
-
-        self.selected_days = []
 
         # Create a container for the checkboxes related to days of the week
         self.days_checkboxes_container = QtWidgets.QWidget(self)
@@ -86,22 +98,11 @@ class AutomatedOrganizerView(QWidget):
         #load_selected_folders(self.folder_selector_list)
         #load_excluded_files(self.file_overview_tree, self.excluded_items_tree)
 
-
-
-
-
-
-
-
-
-
-
         # Create a horizontal layout for folder selection buttons
         self.folder_selector_button_layout = QtWidgets.QHBoxLayout()
         self.folder_selector_button_layout.setContentsMargins(0, 10, -1, -1)
         self.folder_selector_button_layout.setSpacing(30)
         self.folder_selector_button_layout.setObjectName("folder_selector_button_layout")
-
 
         # Create the "Add Folder" button
         self.add_folder_button = QtWidgets.QPushButton(self.main_container)
@@ -118,10 +119,6 @@ class AutomatedOrganizerView(QWidget):
         # Add the folder selection button layout to the main grid layout
         self.main_grid_layout.addLayout(self.folder_selector_button_layout, 1, 0, 1, 1)
 
-
-
-
-
         # Create a horizontal layout for excluded items buttons
         self.excluded_items_button_layout = QtWidgets.QHBoxLayout()
         self.excluded_items_button_layout.setContentsMargins(0, 10, -1, -1)
@@ -135,13 +132,10 @@ class AutomatedOrganizerView(QWidget):
 
         self.include_item_button.setToolTip("Click to INCLUDE selected items above")
 
-
         self.excluded_items_button_layout.addWidget(self.include_item_button)
 
         # Add the excluded items button layout to the main grid layout
         self.main_grid_layout.addLayout(self.excluded_items_button_layout, 1, 2, 1, 1)
-
-
 
         # Create a horizontal layout for file overview buttons
         self.file_overview_button_layout = QtWidgets.QHBoxLayout()
@@ -247,18 +241,15 @@ class AutomatedOrganizerView(QWidget):
         self.days_label_layout.setObjectName("days_label_layout")
         self.days_label_layout.addWidget(self.days_label)
 
-
         # Create a container for the "Automate" button
         self.automate_button_container = QtWidgets.QWidget(self)
         self.automate_button_container.setGeometry(QtCore.QRect(10, 750, 1201, 31))
         self.automate_button_container.setObjectName("automate_button_container")
 
-
         # Create the "Automate" button
         self.automate_button = QtWidgets.QPushButton(self)
         self.automate_button.setGeometry(QtCore.QRect(10, 750, 1201, 31))
         self.automate_button.setObjectName("automate_button")
-
 
         # Create a layout for the "Automate" button
         self.automate_button_layout = QtWidgets.QHBoxLayout(self.automate_button_container)
@@ -283,9 +274,6 @@ class AutomatedOrganizerView(QWidget):
         self.automate_label_layout.setSpacing(0)
         self.automate_label_layout.setObjectName("automate_label_layout")
         self.automate_label_layout.addWidget(self.automate_label)
-
-
-
 
         # Create a container for the icon with text
         self.icon_text_container = QtWidgets.QWidget(self)
@@ -316,3 +304,127 @@ class AutomatedOrganizerView(QWidget):
 
         # Add the icon with text layout to the main layout
         self.main_horizontal_layout.addLayout(self.icon_text_layout)
+
+    # button and event connection
+    def connect_signals(self):
+        self.delete_folder_button.clicked.connect(
+            lambda: self.controller.delete_selected_folder(self.folder_selector_list, self.file_overview_tree,self.excluded_items_tree))
+
+        self.add_folder_button.clicked.connect(
+            lambda: self.controller.open_and_select_folder(self.folder_selector_list, self.file_overview_tree, self.excluded_items_tree))
+
+        self.include_item_button.clicked.connect(
+            lambda: self.controller.include_files(self.file_overview_tree, self.excluded_items_tree))
+
+        self.exclude_item_button.clicked.connect(
+            lambda: self.controller.exclude_files(self.file_overview_tree, self.excluded_items_tree))
+
+        self.automate_button.clicked.connect(
+            lambda: self.toggle_automation())
+
+        self.browse_button.clicked.connect(
+            lambda: self.controller.open_browse_view())
+
+        self.file_overview_tree.itemSelectionChanged.connect(self.on_tree_item_selected)
+        self.excluded_items_tree.itemSelectionChanged.connect(self.on_tree_item_selected)
+
+
+    # on item click event
+    def on_tree_item_selected(self):
+
+        if self.file_overview_tree.hasFocus():
+            selected_items = self.file_overview_tree.selectedItems()
+        else:
+            selected_items = self.excluded_items_tree.selectedItems()
+
+        if selected_items:
+            selected_item = selected_items[0]
+
+            selected_item_text = selected_item.text(0)
+
+            self.select_children(selected_item)
+            self.select_parents(selected_item)
+
+    # on item click event helpers
+    def select_children(self, selected_item):
+
+        # Select all children recursively
+        for child_index in range(selected_item.childCount()):
+            child = selected_item.child(child_index)
+            child.setSelected(True)
+            child_text = child.text(0)
+            self.select_children(child)
+
+    def select_parents(self, selected_item):
+        # Select all parents recursively
+        parent = selected_item.parent()
+
+        while parent:
+            parent_text = parent.text(0)
+            parent.setSelected(True)
+            parent = parent.parent()
+
+    def update_selected_days(self):
+
+        self.selected_days = [day for day, checkbox in self.day_checkboxes_dict.items() if checkbox.isChecked()]
+
+        if not self.selected_days:
+            self.is_toggled = True
+            self.toggle_automation()
+
+        print("Selected Days:", self.selected_days)
+
+    # puts the automation label and button in a false or true state
+    def toggle_automation(self):
+
+        if self.is_toggled == False:
+            if not self.selected_days:
+                QMessageBox.warning(self, "No Days Selected","Please select at least one day before turning on automation.")
+                return
+
+            self.automate_button.setText("ON")
+            self.automate_label.setText("Automation is turned ON")
+            self.automate_label.setStyleSheet("color: green;")
+            self.is_toggled = True
+        else:
+            self.automate_button.setText("OFF")
+            self.automate_label.setText("Automation is turned OFF")
+            self.automate_label.setStyleSheet("color: red;")
+            self.is_toggled = False
+
+    # checks if the automation is on
+    def check_automation_toggle(self):
+        if self.is_toggled == True:
+            print("automation button works")
+            self.controller.check_current_day(self.selected_days, self.remove_duplicates_checkbox,self.file_overview_tree, self.excluded_items_tree)
+        else:
+            print("normale gang van zaken")
+
+    # creates ui components
+    def create_day_checkboxes(self):
+        for day in DAYS:
+            self.checkbox = QtWidgets.QCheckBox(day, self.days_checkboxes_container)
+
+            self.checkbox.setObjectName(day)
+            self.checkbox.setText(day)
+            self.checkbox.stateChanged.connect(self.update_selected_days)
+
+            self.days_checkboxes_layout.addWidget(self.checkbox)
+
+            # Set the initial state of the checkbox from the loaded data
+            if day in self.day_checkboxes_dict:
+                self.checkbox.setChecked(self.day_checkboxes_dict[day])
+
+            # Store the checkbox in the dictionary
+            self.day_checkboxes_dict[day] = self.checkbox
+
+    def set_automation_label_properties(self):
+
+        # Create the "Automation Status" label
+        self.label_text = "Automation is turned ON" if self.is_toggled else "Automation is turned OFF"
+        self.automate_label.setText(self.label_text)
+        self.automate_label.setStyleSheet("color: green;" if self.is_toggled else "color: red;")
+
+    def set_automation_button_properties(self):
+        self.automate_button.setCheckable(not self.is_toggled)
+        self.automate_button.setText("Automate" if self.is_toggled else "OFF")
