@@ -24,6 +24,8 @@ class AutomatedOrganizerView(QWidget):
         # creates the layout
         self.create_layout()
 
+
+
         self.day_checkboxes_dict = self.controller.load_selected_days()
 
 
@@ -380,17 +382,23 @@ class AutomatedOrganizerView(QWidget):
                 parent.setSelected(True)
                 parent = parent.parent()
 
-    def update_selected_days(self):
+    def update_selected_days(self, state):
+        checkbox = self.sender()  # Get the checkbox that emitted the signal
+        day = checkbox.objectName()
 
-        self.selected_days = [day for day, checkbox in self.day_checkboxes_dict.items() if checkbox.isChecked()]
+        if state == QtCore.Qt.Checked:
+            # Checkbox is checked, add the day to the selected_days list
+            if day not in self.selected_days:
+                self.selected_days.append(day)
+        else:
+            # Checkbox is unchecked, remove the day from the selected_days list if it's present
+            self.selected_days = [d for d in self.selected_days if d != day]
 
         if not self.selected_days:
             self.is_toggled = True
             self.toggle_automation()
 
         print("Selected Days:", self.selected_days)
-
-
 
     # puts the automation label and button in a false or true state
     def toggle_automation(self):
@@ -425,7 +433,7 @@ class AutomatedOrganizerView(QWidget):
 
             self.checkbox.setObjectName(day)
             self.checkbox.setText(day)
-            self.checkbox.stateChanged.connect(lambda: self.update_selected_days)
+            self.checkbox.stateChanged.connect(self.update_selected_days)
 
             self.days_checkboxes_layout.addWidget(self.checkbox)
 
