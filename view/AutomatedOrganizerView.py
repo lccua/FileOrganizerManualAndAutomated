@@ -14,17 +14,50 @@ class AutomatedOrganizerView(QWidget):
         self.controller = AutomatedFileOrganizerController()
 
         # variables
-        self.is_toggled = False
+        self.is_toggled = None
+        self.is_toggled = self.controller.load_toggle_state()
+
         self.selected_days = []
-        self.day_checkboxes_dict = {}
+
+
 
         # creates the layout
         self.create_layout()
+
+        self.day_checkboxes_dict = {}
+
+
+        self.data = self.controller.load_selected_days()
+        if self.data is None:
+            pass
+        else:
+            for day, checked in self.data.items():
+                if checked:
+                    self.day_checkboxes_dict[day].setChecked(checked)
+
+
+
+        # Load the state of the "Remove Duplicates" checkbox when the application starts
+        remove_duplicates_state = self.controller.load_remove_duplicates_state()
+        if remove_duplicates_state is not None:
+            self.remove_duplicates_checkbox.setChecked(remove_duplicates_state)
+
+
+
+
+        self.controller.load_selected_folders(self.folder_selector_list, self.file_overview_tree)
+
+        self.controller.load_excluded_files(self.file_overview_tree, self.excluded_items_tree)
 
         self.check_automation_toggle()
         self.create_day_checkboxes()
         self.set_automation_label_properties()
         self.set_automation_button_properties()
+
+        self.controller.post_excluded_tree(self.excluded_items_tree)
+        self.controller.post_included_tree(self.file_overview_tree)
+
+
 
         self.connect_signals()
 
@@ -357,12 +390,14 @@ class AutomatedOrganizerView(QWidget):
 
     def select_parents(self, selected_item):
         # Select all parents recursively
-        parent = selected_item.parent()
+        if selected_item.parent():
+            # Select all parents recursively
+            parent = selected_item.parent()
 
-        while parent:
-            parent_text = parent.text(0)
-            parent.setSelected(True)
-            parent = parent.parent()
+            while parent:
+                parent_text = parent.text(0)
+                parent.setSelected(True)
+                parent = parent.parent()
 
     def update_selected_days(self):
 
@@ -428,3 +463,17 @@ class AutomatedOrganizerView(QWidget):
     def set_automation_button_properties(self):
         self.automate_button.setCheckable(not self.is_toggled)
         self.automate_button.setText("Automate" if self.is_toggled else "OFF")
+
+    def closeEvent(self, event):
+        # This method is called when the window is closed
+        self.controller.save_selected_folders()
+        self.controller.save_selected_days()
+        self.controller.save_toggle_state()
+        self.controller.save_excluded_files()
+
+        # Save the state of the "Remove Duplicates" checkbox
+        remove_duplicates_state = self.remove_duplicates_checkbox.isChecked()
+        self.controller.save_remove_duplicates_state(remove_duplicates_state)
+
+        event.accept()
+

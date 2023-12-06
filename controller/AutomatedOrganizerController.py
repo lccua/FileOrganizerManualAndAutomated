@@ -27,6 +27,48 @@ class AutomatedFileOrganizerController:
         self.browse_view = ExtensionBrowseView()
         self.browse_view.show()
 
+    def post_excluded_tree(self, excluded_items_tree):
+        self.model.post_excluded_tree(excluded_items_tree)
+
+    def post_included_tree(self, file_overview_tree):
+        self.model.post_included_tree(file_overview_tree)
+        
+        
+
+    def load_toggle_state(self):
+        return self.model.load_toggle_state()
+
+    def load_selected_days(self):
+        return self.model.load_selected_days()
+
+    def load_selected_folders(self, folder_selector_list, file_overview_tree):
+        self.model.load_selected_folders(folder_selector_list,file_overview_tree)
+
+    def load_excluded_files(self, file_overview_tree, excluded_items_tree):
+        self.model.load_excluded_files(file_overview_tree, excluded_items_tree)
+
+    def load_remove_duplicates_state(self):
+        return self.model.load_remove_duplicates_state()
+
+    # SAVE JSON
+
+    def save_remove_duplicates_state(self, remove_duplicates_state):
+        self.model.save_remove_duplicates_state(remove_duplicates_state)
+
+    def save_selected_folders(self):
+        self.model.save_selected_folders()
+
+    def save_selected_days(self):
+        self.model.save_selected_days()
+
+    def save_toggle_state(self):
+        self.model.save_toggle_state()
+
+    def save_excluded_files(self):
+        self.model.save_excluded_files()
+
+
+
 
 
 

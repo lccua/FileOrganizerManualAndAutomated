@@ -22,6 +22,8 @@ class ExtensionBrowseView(QWidget):
 
         self.controller.populate_tree(self.treeView, FILE_CATEGORIES, True)
 
+
+
         self.connect_signals()
 
     def create_layout(self):
@@ -83,35 +85,40 @@ class ExtensionBrowseView(QWidget):
         self.treeView.itemSelectionChanged.connect(self.on_tree_item_selected)
 
     def on_tree_item_selected(self):
+        # Get the currently selected item
+        selected_item = self.treeView.currentItem()
 
-        if self.treeView.hasFocus():
-            selected_items = self.treeView.selectedItems()
-        else:
-            selected_items = self.treeView.selectedItems()
-
-        if selected_items:
-            selected_item = selected_items[0]
-
+        if selected_item:
             selected_item_text = selected_item.text(0)
 
-            self.select_children(selected_item)
+            # Select children and parents of the clicked item
             self.select_parents(selected_item)
+            self.select_children(selected_item)
 
     def select_children(self, selected_item):
         # Select all children recursively
         for child_index in range(selected_item.childCount()):
             child = selected_item.child(child_index)
-            child.setSelected(True)
-            child_text = child.text(0)
-            self.select_children(child)
+
+            # Check if the child is not already selected
+            if not child.isSelected():
+                child.setSelected(True)
+
+
+
 
     def select_parents(self, selected_item):
-        # Select all parents recursively
-        parent = selected_item.parent()
+        # Check if the selected item has a parent
+        if selected_item.parent():
+            # Select all parents recursively
+            parent = selected_item.parent()
 
-        while parent:
-            parent_text = parent.text(0)
-            parent.setSelected(True)
-            parent = parent.parent()
+            while parent:
+                parent_text = parent.text(0)
+                parent.setSelected(True)
+                parent = parent.parent()
+
+
+
 
 

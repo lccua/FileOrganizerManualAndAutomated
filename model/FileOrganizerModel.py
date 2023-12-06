@@ -1,5 +1,6 @@
 # model.py
 import hashlib
+import pickle
 import shutil
 
 # third party imports
@@ -47,11 +48,11 @@ class FileOrganizerModel:
     day_checkboxes_dict = {}
 
     # AUTOMATED
-    def get_excluded_tree(self,tree):
+    def post_excluded_tree(self,tree):
         global excluded_tree
         excluded_tree = tree
 
-    def get_inlcuded_tree(self,tree):
+    def post_included_tree(self,tree):
         global included_tree
         included_tree = tree
 
@@ -462,7 +463,7 @@ class FileOrganizerModel:
             selected_folder_name = folder.text()
 
             # Initialize a reference to the current level of the nested dictionary
-            current_level = excluded_files
+            current_level = self.excluded_files
 
             if depth == 0:
                 folder_path = selected_folder_name
@@ -494,9 +495,200 @@ class FileOrganizerModel:
                 if file_type not in current_level[folder_path][category]:
                     current_level[folder_path][category][file_type] = []
 
+
         self.idk_name_yet(included_tree, excluded_tree)
 
-        print(excluded_files)
+        print(self.excluded_files)
+
+    def check_saved_items(self,treeWidget):
+        global checked_items
+
+        # Iterate through the treeWidget items and check those not in checked_items
+        for tree_item in treeWidget.findItems("", QtCore.Qt.MatchContains | QtCore.Qt.MatchRecursive):
+            tree_item.setCheckState(0, QtCore.Qt.Unchecked)
+
+        # Iterate through checked_items and set check state to Checked
+        for folder_path, folders in tester.items():
+            for category, categories in folders.items():
+
+                for file_type, file_types in categories.items():
+
+                    file_type_items = treeWidget.findItems(file_type,
+                                                           QtCore.Qt.MatchContains | QtCore.Qt.MatchRecursive)
+
+                    # Check the lower-level tree view items (depth 2)
+                    for item in file_type_items:
+                        itemlol = item.text(0)
+                        file_type_item = item
+                        category_item = file_type_item.parent()
+                        folder_item = category_item.parent()
+
+                        # Get the name of the top-level item from the first column
+                        top_level_name = folder_item.text(0)
+
+                        if top_level_name == folder_path:
+                            item.setCheckState(0, QtCore.Qt.Checked)  # Set the check state to Checked
+
+                            # Check the children of the item
+                            for child_index in range(item.childCount()):
+                                if child_index == 0:
+                                    break
+                                else:
+                                    child_item = item.child(child_index)
+                                    child_item.setCheckState(0, QtCore.Qt.Checked)
+
+                    for file in file_types:
+                        # Find the item in the tree widget
+                        file_items = treeWidget.findItems(file, QtCore.Qt.MatchContains | QtCore.Qt.MatchRecursive)
+
+                        # Check the lower-level tree view items (depth 3)
+                        for item in file_items:
+                            itemlol = item.text(0)
+                            file_type_item = item.parent()
+                            category_item = file_type_item.parent()
+                            folder_item = category_item.parent()
+
+                            # Get the name of the top-level item from the first column
+                            top_level_name = folder_item.text(0)
+
+                            if top_level_name == folder_path:
+                                item.setCheckState(0, QtCore.Qt.Checked)  # Set the check state to Checked
+
+    # JSON
+    # Function to save the state of the "Remove Duplicates" checkbox
+    def save_remove_duplicates_state(self, state):
+        with open('remove_duplicates_state.pickle', 'wb') as file:
+            pickle.dump(state, file)
+
+    # Function to load the state of the "Remove Duplicates" checkbox
+    def load_remove_duplicates_state(self):
+        try:
+            with open('remove_duplicates_state.pickle', 'rb') as file:
+                state = pickle.load(file)
+                return state
+        except FileNotFoundError:
+            return False  # Default to False if the file doesn't exist or hasn't been saved yet
+
+    # Function to save the dictionary to a file
+    def save_excluded_files(self):
+        global excluded_files
+        # Check if the dictionary is not empty before saving
+        if self.excluded_files:
+            with open("excluded_files.json", 'w') as file:
+                json.dump(self.excluded_files, file)
+
+    # Function to load the dictionary from a file
+    def load_excluded_files(self, included_tree, excluded_tree):
+        global excluded_files
+
+        try:
+            with open("excluded_files.json", 'r') as file:
+                # Check if the file is not empty before loading
+                if os.path.getsize("excluded_files.json") > 0:
+                    self.excluded_files = json.load(file)
+                    self.idk_name_yet(included_tree, excluded_tree)
+                else:
+                    print("excluded_files.json is empty.")
+        except FileNotFoundError:
+            print("excluded_files.json not found.")
+
+    def save_selected_folders(self):
+        if self.is_automated:
+            self.folders = self.selected_folder_paths_automated
+            json_string = "selected_folders_automated.json"
+        else:
+            self.folders = self.selected_folder_paths_manual
+            json_string = "selected_folders_manual.json"
+
+        # Check if the list is not empty before saving
+        if self.folders:
+            with open(json_string, "w") as json_file:
+                json.dump(self.folders, json_file)
+
+    def load_selected_folders(self, listWidget, treeWidget):
+        if self.is_automated:
+            json_string = "selected_folders_automated.json"
+        else:
+            json_string = "selected_folders_manual.json"
+
+        if os.path.exists(json_string):
+            # Check if the file is not empty before loading
+            if os.path.getsize(json_string) > 0:
+                with open(json_string, "r") as json_file:
+                    global selected_folder_paths_manual, selected_folder_paths_automated
+                    folders = json.load(json_file)
+                    if self.is_automated:
+                        selected_folder_paths_automated = folders
+                    else:
+                        selected_folder_paths_manual = folders
+
+                    self.update_list_widget(listWidget, folders)  # Update the list widget with the loaded folder paths
+                    self.categorize_files(treeWidget, folders)
+            else:
+                print(f"{json_string} is empty.")
+
+    def load_checked_items(self, treeWidget):
+        if self.is_automated:
+            global tester
+            # Check if the JSON file with checked item state exists
+            if os.path.exists("checked_items.json"):
+                # Check if the file is not empty before loading
+                if os.path.getsize("checked_items.json") > 0:
+                    with open("checked_items.json", "r") as json_file:
+                        tester = json.load(json_file)
+                        self.check_saved_items(treeWidget)
+                else:
+                    print("checked_items.json is empty.")
+
+    def save_checked_items(self):
+        if self.is_automated:
+            global tester
+            # Check if the dictionary is not empty before saving
+            if tester:
+                with open("checked_items.json", "w") as json_file:
+                    json.dump(tester, json_file)
+
+    checkbox_states = {}
+
+    def save_selected_days(self):
+        # Check if the dictionary is not empty before saving
+        if self.day_checkboxes_dict:
+            with open('checkbox_states.json', 'w') as f:
+                json.dump({day: checkbox.isChecked() for day, checkbox in self.day_checkboxes_dict.items()}, f)
+
+    def load_selected_days(self):
+        try:
+            with open('checkbox_states.json', 'r') as f:
+                # Check if the file is not empty before loading
+                if os.path.getsize('checkbox_states.json') > 0:
+                    data = json.load(f)
+                    return data
+                else:
+                    print('checkbox_states.json is empty.')
+        except FileNotFoundError:
+            pass
+
+    def save_toggle_state(self):
+        config_data = {"is_toggled": self.is_toggled}
+        with open("toggle_state.json", "w") as file:
+            json.dump(config_data, file)
+
+    def load_toggle_state(self):
+        global is_toggled
+        # Check if the configuration file exists
+        if os.path.isfile("toggle_state.json"):
+            # Check if the file is not empty before loading
+            if os.path.getsize("toggle_state.json") > 0:
+                with open("toggle_state.json", "r") as file:
+                    config_data = json.load(file)
+                    is_toggled = config_data.get("is_toggled")
+                    return is_toggled
+            else:
+                print("toggle_state.json is empty.")
+        else:
+            is_toggled = False
+            return is_toggled
+
 
 
 
