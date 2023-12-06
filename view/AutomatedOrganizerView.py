@@ -24,17 +24,7 @@ class AutomatedOrganizerView(QWidget):
         # creates the layout
         self.create_layout()
 
-        self.day_checkboxes_dict = {}
-
-
-        self.data = self.controller.load_selected_days()
-        if self.data is None:
-            pass
-        else:
-            for day, checked in self.data.items():
-                if checked:
-                    self.day_checkboxes_dict[day].setChecked(checked)
-
+        self.day_checkboxes_dict = self.controller.load_selected_days()
 
 
         # Load the state of the "Remove Duplicates" checkbox when the application starts
@@ -121,15 +111,6 @@ class AutomatedOrganizerView(QWidget):
         self.remove_duplicates_checkbox.setObjectName("remove_duplicates_checkbox")
         self.remove_duplicates_checkbox.setText("Remove Duplicates")
 
-        # Load the state of the "Remove Duplicates" checkbox when the application starts
-        #remove_duplicates_state = load_remove_duplicates_state()
-        #if remove_duplicates_state is not None:
-        #    self.remove_duplicates_checkbox.setChecked(remove_duplicates_state)
-
-        #load_toggle_state()
-        #load_selected_days()
-        #load_selected_folders(self.folder_selector_list)
-        #load_excluded_files(self.file_overview_tree, self.excluded_items_tree)
 
         # Create a horizontal layout for folder selection buttons
         self.folder_selector_button_layout = QtWidgets.QHBoxLayout()
@@ -409,6 +390,8 @@ class AutomatedOrganizerView(QWidget):
 
         print("Selected Days:", self.selected_days)
 
+
+
     # puts the automation label and button in a false or true state
     def toggle_automation(self):
 
@@ -442,7 +425,7 @@ class AutomatedOrganizerView(QWidget):
 
             self.checkbox.setObjectName(day)
             self.checkbox.setText(day)
-            self.checkbox.stateChanged.connect(self.update_selected_days)
+            self.checkbox.stateChanged.connect(lambda: self.update_selected_days)
 
             self.days_checkboxes_layout.addWidget(self.checkbox)
 
@@ -467,8 +450,8 @@ class AutomatedOrganizerView(QWidget):
     def closeEvent(self, event):
         # This method is called when the window is closed
         self.controller.save_selected_folders()
-        self.controller.save_selected_days()
-        self.controller.save_toggle_state()
+        self.controller.save_selected_days(self.day_checkboxes_dict)
+        self.controller.save_toggle_state(self.is_toggled)
         self.controller.save_excluded_files()
 
         # Save the state of the "Remove Duplicates" checkbox

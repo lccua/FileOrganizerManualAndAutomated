@@ -618,9 +618,9 @@ class FileOrganizerModel:
                     global selected_folder_paths_manual, selected_folder_paths_automated
                     folders = json.load(json_file)
                     if self.is_automated:
-                        selected_folder_paths_automated = folders
+                        self.selected_folder_paths_automated = folders
                     else:
-                        selected_folder_paths_manual = folders
+                        self.selected_folder_paths_manual = folders
 
                     self.update_list_widget(listWidget, folders)  # Update the list widget with the loaded folder paths
                     self.categorize_files(treeWidget, folders)
@@ -650,26 +650,23 @@ class FileOrganizerModel:
 
     checkbox_states = {}
 
-    def save_selected_days(self):
+    def save_selected_days(self, day_checkboxes_dict):
         # Check if the dictionary is not empty before saving
-        if self.day_checkboxes_dict:
+        if day_checkboxes_dict:
             with open('checkbox_states.json', 'w') as f:
-                json.dump({day: checkbox.isChecked() for day, checkbox in self.day_checkboxes_dict.items()}, f)
+                json.dump({day: checkbox.isChecked() for day, checkbox in day_checkboxes_dict.items()}, f)
 
     def load_selected_days(self):
         try:
             with open('checkbox_states.json', 'r') as f:
-                # Check if the file is not empty before loading
-                if os.path.getsize('checkbox_states.json') > 0:
-                    data = json.load(f)
-                    return data
-                else:
-                    print('checkbox_states.json is empty.')
+                data = json.load(f)
+                return data
+
         except FileNotFoundError:
             pass
 
-    def save_toggle_state(self):
-        config_data = {"is_toggled": self.is_toggled}
+    def save_toggle_state(self,is_toggled):
+        config_data = {"is_toggled": is_toggled}
         with open("toggle_state.json", "w") as file:
             json.dump(config_data, file)
 

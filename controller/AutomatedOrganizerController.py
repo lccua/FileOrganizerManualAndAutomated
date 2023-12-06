@@ -58,11 +58,11 @@ class AutomatedFileOrganizerController:
     def save_selected_folders(self):
         self.model.save_selected_folders()
 
-    def save_selected_days(self):
-        self.model.save_selected_days()
+    def save_selected_days(self,day_checkboxes_dict):
+        self.model.save_selected_days(day_checkboxes_dict)
 
-    def save_toggle_state(self):
-        self.model.save_toggle_state()
+    def save_toggle_state(self, is_toggled):
+        self.model.save_toggle_state(is_toggled)
 
     def save_excluded_files(self):
         self.model.save_excluded_files()
