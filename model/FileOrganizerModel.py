@@ -56,7 +56,7 @@ class FileOrganizerModel:
         global included_tree
         included_tree = tree
 
-    def open_and_select_folder(self, listWidget, treeWidget, excluded_tree):
+    def select_and_display_folder_contents(self, listWidget, treeWidget, excluded_tree):
         # Create options for the file dialog
         options = QFileDialog.Options()
         options |= QFileDialog.ReadOnly  # Add the ReadOnly option
@@ -86,21 +86,21 @@ class FileOrganizerModel:
                         self.selected_folder_paths_automated.append(folder_path)
 
                         # Update and add the selected folder to the list widget
-                        self.update_list_widget(listWidget, self.selected_folder_paths_automated)
+                        self.refresh_list_widget(listWidget, self.selected_folder_paths_automated)
 
 
-                        self.idk_name_yet(treeWidget, excluded_tree)
+                        self.update_and_group_files_by_category_helper(treeWidget, excluded_tree)
 
                     else:
                         self.selected_folder_paths_manual.append(folder_path)
 
                         # Update and add the selected folder to the list widget
-                        self.update_list_widget(listWidget, self.selected_folder_paths_manual)
+                        self.refresh_list_widget(listWidget, self.selected_folder_paths_manual)
 
                         # Categorize the files
-                        self.categorize_files(treeWidget, self.selected_folder_paths_manual)
+                        self.group_files_by_category(treeWidget, self.selected_folder_paths_manual)
 
-    def delete_selected_folder(self,listWidget, treeWidget, excluded_tree):
+    def delete_selected_folder_and_contents(self,listWidget, treeWidget, excluded_tree):
         global selected_folder_paths_automated, selected_folder_paths_manual
         selected_items = listWidget.selectedItems()
 
@@ -125,7 +125,7 @@ class FileOrganizerModel:
                     if source_folder == selected_item:
                         del self.categorized_files[source_folder]
 
-        self.idk_name_yet(treeWidget, excluded_tree)
+        self.update_and_group_files_by_category_helper(treeWidget, excluded_tree)
 
     def include_files(self,included_tree, excluded_tree):
         global categorized_files, excluded_files
@@ -172,7 +172,7 @@ class FileOrganizerModel:
 
         print(self.excluded_files)
         excluded_tree.clear()
-        self.idk_name_yet(included_tree, excluded_tree)
+        self.update_and_group_files_by_category_helper(included_tree, excluded_tree)
 
     def exclude_files(self,included_tree, excluded_tree):
         global categorized_files, excluded_files
@@ -237,31 +237,31 @@ class FileOrganizerModel:
                 current_level[folder_path][category][file_type] = []
 
         print(self.excluded_files)
-        self.idk_name_yet(included_tree, excluded_tree)
+        self.update_and_group_files_by_category_helper(included_tree, excluded_tree)
 
-    def update_list_widget(self,listWidget, selected_folder_paths):
+    def refresh_list_widget(self,listWidget, selected_folder_paths):
         # Clear the existing items in the list widget
         listWidget.clear()
         # Add the selected folder paths to the list widget
         listWidget.addItems(selected_folder_paths)
 
-    def idk_name_yet(self,included_tree, excluded_tree):
+    def update_and_group_files_by_category_helper(self,included_tree, excluded_tree):
         global excluded_files, categorized_files
 
         excluded_tree.clear()
-        self.populate_tree(excluded_tree, self.excluded_files)
+        self.fill_tree_with_data(excluded_tree, self.excluded_files)
 
-        self.categorize_files(included_tree, self.selected_folder_paths_automated)
+        self.group_files_by_category(included_tree, self.selected_folder_paths_automated)
 
         if len(self.categorized_files) != 0:
             self.delete_items_from_dict(self.categorized_files, self.excluded_files)
 
         included_tree.clear()
-        self.populate_tree(included_tree, self.categorized_files)
+        self.fill_tree_with_data(included_tree, self.categorized_files)
 
         print(self.categorized_files)
 
-    def populate_tree(self, treeWidget, categorized_files_dictionary, is_browse_window=None, item=None):
+    def fill_tree_with_data(self, treeWidget, categorized_files_dictionary, is_browse_window=None, item=None):
         # Loop through keys and values in the categorized_files_dictionary
         for category_or_extension_name, values in categorized_files_dictionary.items():
             # If there's no parent item (top-level item):
@@ -283,7 +283,7 @@ class FileOrganizerModel:
 
             if isinstance(values, dict):
                 # When it encounters a dictionary as a value, there are nested items or subcategories to be added.
-                self.populate_tree(treeWidget, values, None, tree_view_item)
+                self.fill_tree_with_data(treeWidget, values, None, tree_view_item)
 
             elif isinstance(values, list):
                 if is_browse_window or not self.is_automated:
@@ -322,7 +322,7 @@ class FileOrganizerModel:
                 # If the key exists in the target_dict, delete it
                 del target_dict[key]
 
-    def categorize_files(self,treeWidget, selected_folder_paths):
+    def group_files_by_category(self,treeWidget, selected_folder_paths):
 
         # Loop through each selected folder path
         for source_folder in selected_folder_paths:
@@ -350,7 +350,7 @@ class FileOrganizerModel:
         treeWidget.clear()
 
         # Populate the tree widget with the categorized files and folders stored in the categorized_files dictionary
-        self.populate_tree(treeWidget, self.categorized_files)
+        self.fill_tree_with_data(treeWidget, self.categorized_files)
 
     def get_item_depth(self,tree_item):
         depth = 0
@@ -421,7 +421,7 @@ class FileOrganizerModel:
         # After organizing files, refresh the QTreeWidget and re-categorize the files
         treeWidget.clear()  # Clear the existing items in the QTreeWidget
         categorized_files = {}  # Clear the categorized_files dictionary
-        self.idk_name_yet(treeWidget, excluded_tree)
+        self.update_and_group_files_by_category_helper(treeWidget, excluded_tree)
 
     def check_current_day(self,selected_days, duplicates_checkbox, tree_widget, excluded_tree):
         # Get the current day (e.g., "Mon", "Tue")
@@ -443,14 +443,14 @@ class FileOrganizerModel:
         return self.selected_folder_paths_automated
 
     # EXTENSION BROWSER
-    def toggle_select_all(self, list_widget):
+    def toggle_select_all_items(self, list_widget):
         list_widget.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
         for index in range(list_widget.count()):
             item = list_widget.item(index)
             item.setSelected(True)
         list_widget.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
 
-    def merge_items_together(self, folder_list, items_tree):
+    def combine_items_into_single_list(self, folder_list, items_tree):
         global categorized_files, excluded_files
 
         selected_folders = folder_list.selectedItems()
@@ -496,7 +496,7 @@ class FileOrganizerModel:
                     current_level[folder_path][category][file_type] = []
 
 
-        self.idk_name_yet(included_tree, excluded_tree)
+        self.update_and_group_files_by_category_helper(included_tree, excluded_tree)
 
         print(self.excluded_files)
 
@@ -586,7 +586,7 @@ class FileOrganizerModel:
                 # Check if the file is not empty before loading
                 if os.path.getsize("excluded_files.json") > 0:
                     self.excluded_files = json.load(file)
-                    self.idk_name_yet(included_tree, excluded_tree)
+                    self.update_and_group_files_by_category_helper(included_tree, excluded_tree)
                 else:
                     print("excluded_files.json is empty.")
         except FileNotFoundError:
@@ -622,8 +622,8 @@ class FileOrganizerModel:
                     else:
                         self.selected_folder_paths_manual = folders
 
-                    self.update_list_widget(listWidget, folders)  # Update the list widget with the loaded folder paths
-                    self.categorize_files(treeWidget, folders)
+                    self.refresh_list_widget(listWidget, folders)  # Update the list widget with the loaded folder paths
+                    self.group_files_by_category(treeWidget, folders)
             else:
                 print(f"{json_string} is empty.")
 

@@ -8,11 +8,11 @@ class AutomatedFileOrganizerController:
         self.model.is_automated = True
 
 
-    def delete_selected_folder(self, folder_selector_list, file_overview_tree, excluded_items_tree):
-        self.model.delete_selected_folder(folder_selector_list, file_overview_tree, excluded_items_tree)
+    def delete_selected_folder_and_contents(self, folder_selector_list, file_overview_tree, excluded_items_tree):
+        self.model.delete_selected_folder_and_contents(folder_selector_list, file_overview_tree, excluded_items_tree)
 
-    def open_and_select_folder(self, folder_selector_list, file_overview_tree, excluded_items_tree):
-        self.model.open_and_select_folder(folder_selector_list, file_overview_tree, excluded_items_tree)
+    def select_and_display_folder_contents(self, folder_selector_list, file_overview_tree, excluded_items_tree):
+        self.model.select_and_display_folder_contents(folder_selector_list, file_overview_tree, excluded_items_tree)
 
     def include_files(self, file_overview_tree, excluded_items_tree):
         self.model.include_files(file_overview_tree, excluded_items_tree)

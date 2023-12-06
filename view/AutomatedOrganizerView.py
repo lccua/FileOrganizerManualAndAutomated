@@ -324,10 +324,10 @@ class AutomatedOrganizerView(QWidget):
     # button and event connection
     def connect_signals(self):
         self.delete_folder_button.clicked.connect(
-            lambda: self.controller.delete_selected_folder(self.folder_selector_list, self.file_overview_tree,self.excluded_items_tree))
+            lambda: self.controller.delete_selected_folder_and_contents(self.folder_selector_list, self.file_overview_tree,self.excluded_items_tree))
 
         self.add_folder_button.clicked.connect(
-            lambda: self.controller.open_and_select_folder(self.folder_selector_list, self.file_overview_tree, self.excluded_items_tree))
+            lambda: self.controller.select_and_display_folder_contents(self.folder_selector_list, self.file_overview_tree, self.excluded_items_tree))
 
         self.include_item_button.clicked.connect(
             lambda: self.controller.include_files(self.file_overview_tree, self.excluded_items_tree))
