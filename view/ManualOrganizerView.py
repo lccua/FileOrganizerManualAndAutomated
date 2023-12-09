@@ -8,16 +8,14 @@ class ManualOrganizerView(QWidget):
         super().__init__()
         self.controller = ManualFileOrganizerController()
 
-        self.controller.is_automated = False
         self.folders = []
 
         self.create_layout()
 
-        self.controller.load_selected_folders(self.folder_selector_list)
-        self.controller.categorize_files(self.file_overview_tree, self.folders)
+        self.controller.load_selected_folders(self.folder_selector_list, self.file_overview_tree)
+        self.controller.group_files_by_category(self.file_overview_tree, self.folders)
 
         self.connect_signals()
-
 
     def create_layout(self):
         # Set the window title
@@ -169,13 +167,13 @@ class ManualOrganizerView(QWidget):
 
     def connect_signals(self):
         self.delete_folder_button.clicked.connect(
-            lambda: self.controller.delete_selected_folder(self.folder_selector_list, self.file_overview_tree))
+            lambda: self.controller.delete_selected_folder_and_contents(self.folder_selector_list, self.file_overview_tree))
 
         self.organize_button.clicked.connect(
-            lambda: self.controller.organize_chosen_files(self.file_overview_tree, self.remove_duplicates_checkbox, self.folders))
+            lambda: self.controller.organize_chosen_files(self.file_overview_tree, self.remove_duplicates_checkbox))
 
         self.add_folder_button.clicked.connect(
-            lambda: self.controller.open_and_select_folder(self.folder_selector_list, self.file_overview_tree))
+            lambda: self.controller.select_and_display_folder_contents(self.folder_selector_list, self.file_overview_tree))
 
         self.select_all_button.clicked.connect(
-            lambda: self.controller.toggle_select_all(self.file_overview_tree))
+            lambda: self.controller.toggle_select_all_items(self.file_overview_tree))

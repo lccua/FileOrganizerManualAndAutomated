@@ -15,37 +15,43 @@ import os
 import json
 
 # local imports
-from constants import FILE_CATEGORIES
-
 
 class FileOrganizerModel:
+    def __init__(self):
 
-    # VARIABLES
-    is_automated = None
-    is_toggled = False
+        # VARIABLES
+        self.is_automated = None
+        self.is_toggled = False
 
-    included_tree = None
-    excluded_tree = None
+        self.included_tree = None
+        self.excluded_tree = None
 
-    selected_days = []
+        self.selected_days = []
 
-    checked_items = {}
+        self.checked_items = {}
 
-    final_checked_items = {}
+        self.final_checked_items = {}
 
-    categorized_files = {}
-    tester = {}
-    excluded_files = {}
+        self.categorized_files = {}
+        self.tester = {}
+        self.excluded_files = {}
 
-    exclusion_status = {}
+        self.exclusion_status = {}
 
-    checkboxes = {}
+        self.checkboxes = {}
 
-    selected_folder_paths_manual = []
+        self.selected_folder_paths_manual = []
 
-    selected_folder_paths_automated = []
+        self.selected_folder_paths_automated = []
 
-    day_checkboxes_dict = {}
+        self.day_checkboxes_dict = {}
+
+        self.config = {}
+        self.load_config()
+
+    def load_config(self):
+        with open('file_categories.json', 'r') as file:
+            self.config = json.load(file)
 
     # AUTOMATED
     def post_excluded_tree(self,tree):
@@ -56,7 +62,7 @@ class FileOrganizerModel:
         global included_tree
         included_tree = tree
 
-    def select_and_display_folder_contents(self, listWidget, treeWidget, excluded_tree):
+    def select_and_display_folder_contents(self, listWidget, treeWidget, excluded_tree=None):
         # Create options for the file dialog
         options = QFileDialog.Options()
         options |= QFileDialog.ReadOnly  # Add the ReadOnly option
@@ -100,7 +106,7 @@ class FileOrganizerModel:
                         # Categorize the files
                         self.group_files_by_category(treeWidget, self.selected_folder_paths_manual)
 
-    def delete_selected_folder_and_contents(self,listWidget, treeWidget, excluded_tree):
+    def delete_selected_folder_and_contents(self,listWidget, treeWidget, excluded_tree=None):
         global selected_folder_paths_automated, selected_folder_paths_manual
         selected_items = listWidget.selectedItems()
 
@@ -245,25 +251,40 @@ class FileOrganizerModel:
         # Add the selected folder paths to the list widget
         listWidget.addItems(selected_folder_paths)
 
-    def update_and_group_files_by_category_helper(self,included_tree, excluded_tree):
+    def update_and_group_files_by_category_helper(self, included_tree, excluded_tree=None, is_automated=True):
         global excluded_files, categorized_files
 
-        excluded_tree.clear()
-        self.fill_tree_with_data(excluded_tree, self.excluded_files)
+        # Clear the excluded_tree if it's provided
+        if excluded_tree is not None:
+            excluded_tree.clear()
 
-        self.group_files_by_category(included_tree, self.selected_folder_paths_automated)
+        # Fill the excluded_tree with data if it's provided
+        if excluded_tree and self.excluded_files:
+            self.fill_tree_with_data(excluded_tree, self.excluded_files)
 
-        if len(self.categorized_files) != 0:
+        # Choose the appropriate folder paths based on the organizer mode (automated or manual)
+        selected_folder_paths = self.selected_folder_paths_automated if is_automated else self.selected_folder_paths_manual
+
+        # Group files by category based on the selected paths
+        self.group_files_by_category(included_tree, selected_folder_paths)
+
+        # If there are categorized files, delete items from the dictionary that are also in excluded_files
+        if self.categorized_files:
             self.delete_items_from_dict(self.categorized_files, self.excluded_files)
 
+        # Clear the included_tree and fill it with updated categorized_files data
         included_tree.clear()
         self.fill_tree_with_data(included_tree, self.categorized_files)
 
         print(self.categorized_files)
 
-    def fill_tree_with_data(self, treeWidget, categorized_files_dictionary, is_browse_window=None, item=None):
+    def fill_tree_with_data(self, treeWidget, file_categories=None, is_browse_window=None, item=None):
         # Loop through keys and values in the categorized_files_dictionary
-        for category_or_extension_name, values in categorized_files_dictionary.items():
+
+        if file_categories == None:
+            file_categories = self.config
+
+        for category_or_extension_name, values in file_categories.items():
             # If there's no parent item (top-level item):
             if item is None:
                 # Create a new top-level item in the tree_view
@@ -331,7 +352,7 @@ class FileOrganizerModel:
                 file_extension = os.path.splitext(filename)[1]
                 if file_extension:
                     # Look for the file extension in the dictionary file_categories
-                    for category, extensions in FILE_CATEGORIES.items():
+                    for category, extensions in self.config.items():
                         if file_extension in extensions:
                             if source_folder not in self.categorized_files:
                                 # Create an entry for the source folder in the categorized files dictionary
@@ -360,8 +381,12 @@ class FileOrganizerModel:
             parent = parent.parent()
         return depth
 
-    def organize_chosen_files(self,treeWidget, remove_duplicates_checkbox, selected_folder_paths, excluded_tree):
+    def organize_chosen_files(self,treeWidget, remove_duplicates_checkbox, excluded_tree=None):
         global categorized_files, checked_items
+
+        if self.is_automated == False:
+            unchecked_items = self.get_unchecked_items(treeWidget)
+            self.remove_unchecked_items_from_categorized_files(self.categorized_files,unchecked_items)
 
         def calculate_file_hash(file_path, hash_function=hashlib.md5, buffer_size=65536):
             hash_obj = hash_function()
@@ -392,7 +417,7 @@ class FileOrganizerModel:
                         # Add the file hash to the dictionary
                         file_hashes[file_hash] = file_path
 
-        for folder_path, folders in categorized_files.items():
+        for folder_path, folders in self.categorized_files.items():
             print(folder_path)
             for category, categories in folders.items():
                 print(category)
@@ -421,6 +446,7 @@ class FileOrganizerModel:
         # After organizing files, refresh the QTreeWidget and re-categorize the files
         treeWidget.clear()  # Clear the existing items in the QTreeWidget
         categorized_files = {}  # Clear the categorized_files dictionary
+
         self.update_and_group_files_by_category_helper(treeWidget, excluded_tree)
 
     def check_current_day(self,selected_days, duplicates_checkbox, tree_widget, excluded_tree):
@@ -433,7 +459,7 @@ class FileOrganizerModel:
             print("yes today needs to be organized")
 
             if len(categorized_files) != 0:
-                self.organize_chosen_files(tree_widget, duplicates_checkbox, selected_folder_paths_automated, excluded_tree)
+                self.organize_chosen_files(tree_widget, duplicates_checkbox, excluded_tree)
 
 
         else:
@@ -442,7 +468,6 @@ class FileOrganizerModel:
     def get_selected_folder_paths_automated(self):
         return self.selected_folder_paths_automated
 
-    # EXTENSION BROWSER
     def toggle_select_all_items(self, list_widget):
         list_widget.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
         for index in range(list_widget.count()):
@@ -499,6 +524,55 @@ class FileOrganizerModel:
         self.update_and_group_files_by_category_helper(included_tree, excluded_tree)
 
         print(self.excluded_files)
+
+    def get_unchecked_items(self, treeWidget):
+        unchecked_items = []
+
+        # Iterating over each top-level item in the tree
+        for i in range(treeWidget.topLevelItemCount()):
+            top_item = treeWidget.topLevelItem(i)
+
+            # Iterating over second-level child items
+            for j in range(top_item.childCount()):
+                second_level_item = top_item.child(j)
+
+                # Iterating over third-level child items
+                for k in range(second_level_item.childCount()):
+                    third_level_item = second_level_item.child(k)
+
+                    # Iterating over fourth-level child items
+                    for l in range(third_level_item.childCount()):
+                        fourth_level_item = third_level_item.child(l)
+
+                        # Check if the fourth-level item is unchecked
+                        if fourth_level_item.checkState(0) != QtCore.Qt.Checked:
+                            unchecked_items.append(
+                                fourth_level_item.text(0))  # Assuming the item's text is the identifier
+
+        return unchecked_items
+
+    def remove_unchecked_items_from_categorized_files(self,categorized_files, unchecked_items):
+        for category, subcategories in list(categorized_files.items()):
+            for subcategory, filetypes in list(subcategories.items()):
+                for filetype, files in list(filetypes.items()):
+                    # Filter out unchecked items from the fourth level
+                    categorized_files[category][subcategory][filetype] = [
+                        file for file in files if file not in unchecked_items
+                    ]
+
+                    # Remove empty file types
+                    if not categorized_files[category][subcategory][filetype]:
+                        del categorized_files[category][subcategory][filetype]
+
+                # Remove empty subcategories
+                if not categorized_files[category][subcategory]:
+                    del categorized_files[category][subcategory]
+
+            # Remove empty categories
+            if not categorized_files[category]:
+                del categorized_files[category]
+
+        return categorized_files
 
     def check_saved_items(self,treeWidget):
         global checked_items

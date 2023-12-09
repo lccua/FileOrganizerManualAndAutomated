@@ -2,7 +2,6 @@
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtWidgets import QWidget, QLabel
 
-from constants import FILE_CATEGORIES
 
 from controller.ExtensionBrowseController import ExtensionBrowseController
 
@@ -17,10 +16,10 @@ class ExtensionBrowseView(QWidget):
         self.controller = ExtensionBrowseController()
 
         self.folders = self.controller.get_selected_folder_paths_automated()
-        self.controller.update_list_widget(self.listView, self.folders)
+        self.controller.refresh_list_widget(self.listView, self.folders)
 
 
-        self.controller.populate_tree(self.treeView, FILE_CATEGORIES, True)
+        self.controller.fill_tree_with_data(self.treeView, True)
 
 
 
@@ -80,8 +79,8 @@ class ExtensionBrowseView(QWidget):
 
     def connect_signals(self):
 
-        self.pushButton.clicked.connect(lambda: self.controller.merge_items_together(self.listView, self.treeView))
-        self.pushButton_2.clicked.connect(lambda: self.controller.toggle_select_all(self.listView))
+        self.pushButton.clicked.connect(lambda: self.controller.combine_items_into_single_list(self.listView, self.treeView))
+        self.pushButton_2.clicked.connect(lambda: self.controller.toggle_select_all_items(self.listView))
         self.treeView.itemSelectionChanged.connect(self.on_tree_item_selected)
 
     def on_tree_item_selected(self):
@@ -117,8 +116,3 @@ class ExtensionBrowseView(QWidget):
                 parent_text = parent.text(0)
                 parent.setSelected(True)
                 parent = parent.parent()
-
-
-
-
-

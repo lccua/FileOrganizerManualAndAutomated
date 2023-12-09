@@ -438,11 +438,15 @@ class AutomatedOrganizerView(QWidget):
             self.days_checkboxes_layout.addWidget(self.checkbox)
 
             # Set the initial state of the checkbox from the loaded data
-            if day in self.day_checkboxes_dict:
-                self.checkbox.setChecked(self.day_checkboxes_dict[day])
+            if self.day_checkboxes_dict is not None:
+                if day in self.day_checkboxes_dict:
+                    self.checkbox.setChecked(self.day_checkboxes_dict[day])
+                    # Store the checkbox in the dictionary
+                    self.day_checkboxes_dict[day] = self.checkbox
 
-            # Store the checkbox in the dictionary
-            self.day_checkboxes_dict[day] = self.checkbox
+
+
+
 
     def set_automation_label_properties(self):
 
