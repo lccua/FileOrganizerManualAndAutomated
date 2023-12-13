@@ -46,8 +46,8 @@ class AutomatedOrganizerView(QWidget):
         self.set_automation_label_properties()
         self.set_automation_button_properties()
 
-        self.controller.post_excluded_tree(self.excluded_items_tree)
-        self.controller.post_included_tree(self.file_overview_tree)
+        self.controller.get_excluded_tree(self.excluded_items_tree)
+        self.controller.get_included_tree(self.file_overview_tree)
 
 
 
@@ -426,27 +426,20 @@ class AutomatedOrganizerView(QWidget):
         else:
             print("normale gang van zaken")
 
-    # creates ui components
     def create_day_checkboxes(self):
+        self.day_checkboxes_dict = {}
+        loaded_days = self.controller.load_selected_days()  # Load the saved states
         for day in DAYS:
-            self.checkbox = QtWidgets.QCheckBox(day, self.days_checkboxes_container)
-
-            self.checkbox.setObjectName(day)
-            self.checkbox.setText(day)
-            self.checkbox.stateChanged.connect(self.update_selected_days)
-
-            self.days_checkboxes_layout.addWidget(self.checkbox)
+            checkbox = QtWidgets.QCheckBox(day, self.days_checkboxes_container)
+            checkbox.setObjectName(day)
+            checkbox.setText(day)
+            checkbox.stateChanged.connect(self.update_selected_days)
+            self.days_checkboxes_layout.addWidget(checkbox)
+            self.day_checkboxes_dict[day] = checkbox
 
             # Set the initial state of the checkbox from the loaded data
-            if self.day_checkboxes_dict is not None:
-                if day in self.day_checkboxes_dict:
-                    self.checkbox.setChecked(self.day_checkboxes_dict[day])
-                    # Store the checkbox in the dictionary
-                    self.day_checkboxes_dict[day] = self.checkbox
-
-
-
-
+            if day in loaded_days:
+                checkbox.setChecked(loaded_days[day])
 
     def set_automation_label_properties(self):
 

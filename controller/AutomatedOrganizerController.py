@@ -6,6 +6,7 @@ class AutomatedFileOrganizerController:
         self.model = FileOrganizerModel()
 
         self.model.is_automated = True
+        self.model.is_browse_window = False
 
 
     def delete_selected_folder_and_contents(self, folder_selector_list, file_overview_tree, excluded_items_tree):
@@ -24,16 +25,22 @@ class AutomatedFileOrganizerController:
         self.model.check_current_day(selected_days, remove_duplicates_checkbox, file_overview_tree, excluded_items_tree)
 
     def open_browse_view(self):
-        self.browse_view = ExtensionBrowseView()
+        folders = self.get_selected_folder_paths_automated()
+        excluded_files = self.get_excluded_files()
+        self.browse_view = ExtensionBrowseView(folders,excluded_files )
         self.browse_view.show()
 
-    def post_excluded_tree(self, excluded_items_tree):
-        self.model.post_excluded_tree(excluded_items_tree)
+    def get_excluded_tree(self, excluded_items_tree):
+        self.model.get_excluded_tree(excluded_items_tree)
 
-    def post_included_tree(self, file_overview_tree):
-        self.model.post_included_tree(file_overview_tree)
-        
-        
+    def get_included_tree(self, file_overview_tree):
+        self.model.get_included_tree(file_overview_tree)
+
+    def get_selected_folder_paths_automated(self):
+        return self.model.get_selected_folder_paths_automated()
+
+    def get_excluded_files(self):
+        return self.model.get_excluded_files()
 
     def load_toggle_state(self):
         return self.model.load_toggle_state()

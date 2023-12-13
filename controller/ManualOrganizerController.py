@@ -6,6 +6,7 @@ class ManualFileOrganizerController:
         self.model = FileOrganizerModel()
 
         self.model.is_automated = False
+        self.model.is_browse_window = False
 
 
     def load_selected_folders(self, folder_selector_list, file_overview_tree ):

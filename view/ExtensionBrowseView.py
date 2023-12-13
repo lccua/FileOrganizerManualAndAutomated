@@ -7,7 +7,7 @@ from controller.ExtensionBrowseController import ExtensionBrowseController
 
 
 class ExtensionBrowseView(QWidget):
-    def __init__(self):
+    def __init__(self,folders, excluded_files):
         super().__init__()
 
 
@@ -15,11 +15,14 @@ class ExtensionBrowseView(QWidget):
 
         self.controller = ExtensionBrowseController()
 
-        self.folders = self.controller.get_selected_folder_paths_automated()
+        self.folders = folders
         self.controller.refresh_list_widget(self.listView, self.folders)
 
+        self.excluded_files = excluded_files
 
-        self.controller.fill_tree_with_data(self.treeView, True)
+        self.controller.post_excluded_files(self.excluded_files)
+
+        self.controller.fill_tree_with_data(self.treeView)
 
 
 

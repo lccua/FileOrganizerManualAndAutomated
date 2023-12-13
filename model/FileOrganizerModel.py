@@ -17,50 +17,62 @@ import json
 # local imports
 
 class FileOrganizerModel:
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(FileOrganizerModel, cls).__new__(cls)
+
+            # Initialize class variables here
+            cls._instance.is_automated = None
+            cls._instance.is_toggled = False
+            cls._instance.is_browse_window = None
+
+            cls._instance.included_tree = None
+            cls._instance.excluded_tree = None
+
+            cls._instance.selected_days = []
+
+            cls._instance.checked_items = {}
+
+            cls._instance.final_checked_items = {}
+
+            cls._instance.categorized_files = {}
+            cls._instance.tester = {}
+            cls._instance.excluded_files = {}
+
+            cls._instance.exclusion_status = {}
+
+            cls._instance.checkboxes = {}
+
+            cls._instance.selected_folder_paths_manual = []
+            cls._instance.selected_folder_paths_automated = []
+
+            cls._instance.day_checkboxes_dict = {}
+
+            cls._instance.config = {}
+            cls._instance.load_config()
+
+        return cls._instance
+
     def __init__(self):
+        # Ensure initialization happens only once
+        if not hasattr(self, '_initialized'):
+            # Call any setup methods or any additional initialization here if needed
+            self._initialized = True
 
-        # VARIABLES
-        self.is_automated = None
-        self.is_toggled = False
-
-        self.included_tree = None
-        self.excluded_tree = None
-
-        self.selected_days = []
-
-        self.checked_items = {}
-
-        self.final_checked_items = {}
-
-        self.categorized_files = {}
-        self.tester = {}
-        self.excluded_files = {}
-
-        self.exclusion_status = {}
-
-        self.checkboxes = {}
-
-        self.selected_folder_paths_manual = []
-
-        self.selected_folder_paths_automated = []
-
-        self.day_checkboxes_dict = {}
-
-        self.config = {}
-        self.load_config()
 
     def load_config(self):
         with open('file_categories.json', 'r') as file:
             self.config = json.load(file)
 
     # AUTOMATED
-    def post_excluded_tree(self,tree):
-        global excluded_tree
-        excluded_tree = tree
+    def get_excluded_tree(self,tree):
+        self.excluded_tree = tree
 
-    def post_included_tree(self,tree):
-        global included_tree
-        included_tree = tree
+    def get_included_tree(self,tree):
+        self.included_tree = tree
+
 
     def select_and_display_folder_contents(self, listWidget, treeWidget, excluded_tree=None):
         # Create options for the file dialog
@@ -95,7 +107,7 @@ class FileOrganizerModel:
                         self.refresh_list_widget(listWidget, self.selected_folder_paths_automated)
 
 
-                        self.update_and_group_files_by_category_helper(treeWidget, excluded_tree)
+                        self.update_tree_views(treeWidget, excluded_tree)
 
                     else:
                         self.selected_folder_paths_manual.append(folder_path)
@@ -106,41 +118,89 @@ class FileOrganizerModel:
                         # Categorize the files
                         self.group_files_by_category(treeWidget, self.selected_folder_paths_manual)
 
-    def delete_selected_folder_and_contents(self,listWidget, treeWidget, excluded_tree=None):
-        global selected_folder_paths_automated, selected_folder_paths_manual
+
+    def delete_selected_folder_and_contents(self, listWidget, treeWidget, excluded_tree=None):
+        """
+        Deletes the selected folder and updates the UI accordingly.
+
+        Parameters:
+        listWidget (QListWidget): The widget listing the folders.
+        treeWidget (QTreeWidget): The tree widget displaying folder structure.
+        excluded_tree (QTreeWidget): Optional tree widget for excluded items.
+        """
+        selected_item = self.get_selected_folder(listWidget)
+        if not selected_item:
+            return
+
+        if self.remove_folder_from_paths(selected_item):
+            print("Deleted folder:", selected_item)
+            self.update_folder_list_ui(listWidget)
+            self.remove_folder_from_categorized_files(selected_item)
+            self.update_tree_views(treeWidget, excluded_tree)
+
+    def get_selected_folder(self, listWidget):
+        """
+        Gets the text of the currently selected item in the list widget.
+
+        Parameters:
+        listWidget (QListWidget): The widget listing the folders.
+
+        Returns:
+        str: The text of the selected item or None if no item is selected.
+        """
         selected_items = listWidget.selectedItems()
-
-        if self.is_automated:
-            selected_folder_paths = self.selected_folder_paths_automated
-        else:
-            selected_folder_paths = self.selected_folder_paths_manual
-
         if selected_items:
-            selected_item = selected_items[0].text()
+            return selected_items[0].text()
+        return None
 
-            if selected_item in selected_folder_paths:
-                selected_folder_paths.remove(selected_item)  # Remove the selected folder path
-                print("Deleted folder:", selected_item)
+    def remove_folder_from_paths(self, selected_item):
+        """
+        Removes the selected folder path from the appropriate list based on mode.
 
-                # Update the QListWidget with the modified folder paths
-                listWidget.clear()  # Clear the existing items
-                listWidget.addItems(selected_folder_paths)  # Add the modified folder paths
+        Parameters:
+        selected_item (str): The folder path to be removed.
 
-                # Delete the folder from the categorized_files dictionary
-                for source_folder in list(self.categorized_files.keys()):
-                    if source_folder == selected_item:
-                        del self.categorized_files[source_folder]
+        Returns:
+        bool: True if the folder was successfully removed, False otherwise.
+        """
+        selected_folder_paths = self.selected_folder_paths_automated if self.is_automated else self.selected_folder_paths_manual
+        if selected_item in selected_folder_paths:
+            selected_folder_paths.remove(selected_item)
+            return True
+        return False
 
-        self.update_and_group_files_by_category_helper(treeWidget, excluded_tree)
+    def update_folder_list_ui(self, listWidget):
+        """
+        Updates the folder list in the UI.
+
+        Parameters:
+        listWidget (QListWidget): The widget listing the folders.
+        """
+        listWidget.clear()
+        selected_folder_paths = self.selected_folder_paths_automated if self.is_automated else self.selected_folder_paths_manual
+        listWidget.addItems(selected_folder_paths)
+
+    def remove_folder_from_categorized_files(self, selected_item):
+        """
+        Removes the selected folder from the categorized files dictionary.
+
+        Parameters:
+        selected_item (str): The folder path to be removed.
+        """
+        if selected_item in self.categorized_files:
+            del self.categorized_files[selected_item]
+
+
 
     def include_files(self,included_tree, excluded_tree):
-        global categorized_files, excluded_files
 
         selected_item = excluded_tree.selectedItems()[0]
         depth = self.get_item_depth(selected_item)
 
-        # Initialize a reference to the current level of the nested dictionary
-        current_level = self.excluded_files
+        if len(self.excluded_files) == 0:
+            current_level = self.excluded_files
+        else:
+            current_level = self.excluded_files
 
         if depth == 0:
             folder_path = selected_item.text(0)
@@ -178,18 +238,17 @@ class FileOrganizerModel:
 
         print(self.excluded_files)
         excluded_tree.clear()
-        self.update_and_group_files_by_category_helper(included_tree, excluded_tree)
+        self.update_tree_views(included_tree, excluded_tree)
 
     def exclude_files(self,included_tree, excluded_tree):
-        global categorized_files, excluded_files
         excluded_tree.clear()
 
         selected_item = included_tree.selectedItems()[0]
 
         depth = self.get_item_depth(selected_item)
 
-        # Initialize a reference to the current level of the nested dictionary
         current_level = self.excluded_files
+
 
         if depth == 0:
             folder_path = selected_item.text(0)
@@ -243,7 +302,7 @@ class FileOrganizerModel:
                 current_level[folder_path][category][file_type] = []
 
         print(self.excluded_files)
-        self.update_and_group_files_by_category_helper(included_tree, excluded_tree)
+        self.update_tree_views(included_tree, excluded_tree)
 
     def refresh_list_widget(self,listWidget, selected_folder_paths):
         # Clear the existing items in the list widget
@@ -251,34 +310,41 @@ class FileOrganizerModel:
         # Add the selected folder paths to the list widget
         listWidget.addItems(selected_folder_paths)
 
-    def update_and_group_files_by_category_helper(self, included_tree, excluded_tree=None, is_automated=True):
-        global excluded_files, categorized_files
 
-        # Clear the excluded_tree if it's provided
-        if excluded_tree is not None:
+    def update_tree_views(self, included_tree, excluded_tree=None):
+        """
+        Updates the tree views with categorized and excluded files.
+
+        Parameters:
+        included_tree (QTreeWidget): Tree widget for included files.
+        excluded_tree (QTreeWidget): Optional tree widget for excluded files.
+        """
+        self.clear_and_fill_excluded_tree(excluded_tree)
+        self.group_files_by_category_helper(included_tree)
+        self.remove_excluded_from_categorized()
+        self.fill_included_tree(included_tree)
+
+    def clear_and_fill_excluded_tree(self, excluded_tree):
+        if excluded_tree:
             excluded_tree.clear()
+            if self.excluded_files:
+                self.fill_tree_with_data(excluded_tree, self.excluded_files)
 
-        # Fill the excluded_tree with data if it's provided
-        if excluded_tree and self.excluded_files:
-            self.fill_tree_with_data(excluded_tree, self.excluded_files)
+    def group_files_by_category_helper(self, included_tree):
+        folder_paths = self.selected_folder_paths_automated if self.is_automated else self.selected_folder_paths_manual
+        self.group_files_by_category(included_tree, folder_paths)
 
-        # Choose the appropriate folder paths based on the organizer mode (automated or manual)
-        selected_folder_paths = self.selected_folder_paths_automated if is_automated else self.selected_folder_paths_manual
-
-        # Group files by category based on the selected paths
-        self.group_files_by_category(included_tree, selected_folder_paths)
-
-        # If there are categorized files, delete items from the dictionary that are also in excluded_files
+    def remove_excluded_from_categorized(self):
         if self.categorized_files:
             self.delete_items_from_dict(self.categorized_files, self.excluded_files)
 
-        # Clear the included_tree and fill it with updated categorized_files data
-        included_tree.clear()
-        self.fill_tree_with_data(included_tree, self.categorized_files)
+    def fill_included_tree(self, included_tree):
+        if not self.is_browse_window:
+            included_tree.clear()
+            self.fill_tree_with_data(included_tree, self.categorized_files)
 
-        print(self.categorized_files)
 
-    def fill_tree_with_data(self, treeWidget, file_categories=None, is_browse_window=None, item=None):
+    def fill_tree_with_data(self, treeWidget, file_categories=None, item=None):
         # Loop through keys and values in the categorized_files_dictionary
 
         if file_categories == None:
@@ -304,10 +370,10 @@ class FileOrganizerModel:
 
             if isinstance(values, dict):
                 # When it encounters a dictionary as a value, there are nested items or subcategories to be added.
-                self.fill_tree_with_data(treeWidget, values, None, tree_view_item)
+                self.fill_tree_with_data(treeWidget, values, tree_view_item)
 
             elif isinstance(values, list):
-                if is_browse_window or not self.is_automated:
+                if self.is_browse_window or not self.is_automated:
 
                     # Loop through each filename in the list
                     for filename in values:
@@ -324,6 +390,7 @@ class FileOrganizerModel:
 
         # After populating the tree with categorized_files, sort the items alphabetically
         treeWidget.sortItems(0, Qt.AscendingOrder)
+
 
     def delete_items_from_dict(self,target_dict, items_to_delete):
 
@@ -344,7 +411,6 @@ class FileOrganizerModel:
                 del target_dict[key]
 
     def group_files_by_category(self,treeWidget, selected_folder_paths):
-
         # Loop through each selected folder path
         for source_folder in selected_folder_paths:
             # Loop through files in the source folder
@@ -368,10 +434,11 @@ class FileOrganizerModel:
                             # Add the file to the file extension list
                             self.categorized_files[source_folder][category][file_extension].append(filename)
 
-        treeWidget.clear()
+        if self.is_browse_window == False:
+            treeWidget.clear()
 
-        # Populate the tree widget with the categorized files and folders stored in the categorized_files dictionary
-        self.fill_tree_with_data(treeWidget, self.categorized_files)
+            # Populate the tree widget with the categorized files and folders stored in the categorized_files dictionary
+            self.fill_tree_with_data(treeWidget, self.categorized_files)
 
     def get_item_depth(self,tree_item):
         depth = 0
@@ -382,7 +449,6 @@ class FileOrganizerModel:
         return depth
 
     def organize_chosen_files(self,treeWidget, remove_duplicates_checkbox, excluded_tree=None):
-        global categorized_files, checked_items
 
         if self.is_automated == False:
             unchecked_items = self.get_unchecked_items(treeWidget)
@@ -447,7 +513,7 @@ class FileOrganizerModel:
         treeWidget.clear()  # Clear the existing items in the QTreeWidget
         categorized_files = {}  # Clear the categorized_files dictionary
 
-        self.update_and_group_files_by_category_helper(treeWidget, excluded_tree)
+        self.update_tree_views(treeWidget, excluded_tree)
 
     def check_current_day(self,selected_days, duplicates_checkbox, tree_widget, excluded_tree):
         # Get the current day (e.g., "Mon", "Tue")
@@ -458,7 +524,7 @@ class FileOrganizerModel:
         if current_day in selected_days:
             print("yes today needs to be organized")
 
-            if len(categorized_files) != 0:
+            if len(self.categorized_files) != 0:
                 self.organize_chosen_files(tree_widget, duplicates_checkbox, excluded_tree)
 
 
@@ -468,6 +534,9 @@ class FileOrganizerModel:
     def get_selected_folder_paths_automated(self):
         return self.selected_folder_paths_automated
 
+    def get_excluded_files(self):
+        return self.excluded_files
+
     def toggle_select_all_items(self, list_widget):
         list_widget.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
         for index in range(list_widget.count()):
@@ -475,9 +544,8 @@ class FileOrganizerModel:
             item.setSelected(True)
         list_widget.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
 
-    def combine_items_into_single_list(self, folder_list, items_tree):
-        global categorized_files, excluded_files
 
+    def combine_items_into_single_list(self, folder_list, items_tree):
         selected_folders = folder_list.selectedItems()
 
         selected_item = items_tree.selectedItems()[0]
@@ -488,7 +556,11 @@ class FileOrganizerModel:
             selected_folder_name = folder.text()
 
             # Initialize a reference to the current level of the nested dictionary
+
             current_level = self.excluded_files
+
+
+
 
             if depth == 0:
                 folder_path = selected_folder_name
@@ -521,7 +593,7 @@ class FileOrganizerModel:
                     current_level[folder_path][category][file_type] = []
 
 
-        self.update_and_group_files_by_category_helper(included_tree, excluded_tree)
+        self.update_tree_views(self.included_tree, self.excluded_tree)
 
         print(self.excluded_files)
 
@@ -575,14 +647,13 @@ class FileOrganizerModel:
         return categorized_files
 
     def check_saved_items(self,treeWidget):
-        global checked_items
 
         # Iterate through the treeWidget items and check those not in checked_items
         for tree_item in treeWidget.findItems("", QtCore.Qt.MatchContains | QtCore.Qt.MatchRecursive):
             tree_item.setCheckState(0, QtCore.Qt.Unchecked)
 
         # Iterate through checked_items and set check state to Checked
-        for folder_path, folders in tester.items():
+        for folder_path, folders in self.tester.items():
             for category, categories in folders.items():
 
                 for file_type, file_types in categories.items():
@@ -645,7 +716,6 @@ class FileOrganizerModel:
 
     # Function to save the dictionary to a file
     def save_excluded_files(self):
-        global excluded_files
         # Check if the dictionary is not empty before saving
         if self.excluded_files:
             with open("excluded_files.json", 'w') as file:
@@ -653,14 +723,12 @@ class FileOrganizerModel:
 
     # Function to load the dictionary from a file
     def load_excluded_files(self, included_tree, excluded_tree):
-        global excluded_files
-
         try:
             with open("excluded_files.json", 'r') as file:
                 # Check if the file is not empty before loading
                 if os.path.getsize("excluded_files.json") > 0:
                     self.excluded_files = json.load(file)
-                    self.update_and_group_files_by_category_helper(included_tree, excluded_tree)
+                    self.update_tree_views(included_tree, excluded_tree)
                 else:
                     print("excluded_files.json is empty.")
         except FileNotFoundError:
@@ -689,7 +757,6 @@ class FileOrganizerModel:
             # Check if the file is not empty before loading
             if os.path.getsize(json_string) > 0:
                 with open(json_string, "r") as json_file:
-                    global selected_folder_paths_manual, selected_folder_paths_automated
                     folders = json.load(json_file)
                     if self.is_automated:
                         self.selected_folder_paths_automated = folders
@@ -703,41 +770,37 @@ class FileOrganizerModel:
 
     def load_checked_items(self, treeWidget):
         if self.is_automated:
-            global tester
             # Check if the JSON file with checked item state exists
             if os.path.exists("checked_items.json"):
                 # Check if the file is not empty before loading
                 if os.path.getsize("checked_items.json") > 0:
                     with open("checked_items.json", "r") as json_file:
-                        tester = json.load(json_file)
+                        self.tester = json.load(json_file)
                         self.check_saved_items(treeWidget)
                 else:
                     print("checked_items.json is empty.")
 
     def save_checked_items(self):
         if self.is_automated:
-            global tester
             # Check if the dictionary is not empty before saving
-            if tester:
+            if self.tester:
                 with open("checked_items.json", "w") as json_file:
-                    json.dump(tester, json_file)
+                    json.dump(self.tester, json_file)
 
     checkbox_states = {}
 
     def save_selected_days(self, day_checkboxes_dict):
-        # Check if the dictionary is not empty before saving
         if day_checkboxes_dict:
+            day_states = {day: checkbox.isChecked() for day, checkbox in day_checkboxes_dict.items()}
             with open('checkbox_states.json', 'w') as f:
-                json.dump({day: checkbox.isChecked() for day, checkbox in day_checkboxes_dict.items()}, f)
+                json.dump(day_states, f)
 
     def load_selected_days(self):
         try:
             with open('checkbox_states.json', 'r') as f:
-                data = json.load(f)
-                return data
-
+                return json.load(f)
         except FileNotFoundError:
-            pass
+            return {}
 
     def save_toggle_state(self,is_toggled):
         config_data = {"is_toggled": is_toggled}
@@ -745,20 +808,19 @@ class FileOrganizerModel:
             json.dump(config_data, file)
 
     def load_toggle_state(self):
-        global is_toggled
         # Check if the configuration file exists
         if os.path.isfile("toggle_state.json"):
             # Check if the file is not empty before loading
             if os.path.getsize("toggle_state.json") > 0:
                 with open("toggle_state.json", "r") as file:
                     config_data = json.load(file)
-                    is_toggled = config_data.get("is_toggled")
-                    return is_toggled
+                    self.is_toggled = config_data.get("is_toggled")
+                    return self.is_toggled
             else:
                 print("toggle_state.json is empty.")
         else:
-            is_toggled = False
-            return is_toggled
+            self.is_toggled = False
+            return self.is_toggled
 
 
 
