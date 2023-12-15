@@ -12,8 +12,6 @@ class ManualOrganizerView(QWidget):
 
         self.create_layout()
 
-        self.controller.load_selected_folders(self.folder_selector_list, self.file_overview_tree)
-        self.controller.group_files_by_category(self.file_overview_tree, self.folders)
 
         self.connect_signals()
 

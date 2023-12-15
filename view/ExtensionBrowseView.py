@@ -7,7 +7,7 @@ from controller.ExtensionBrowseController import ExtensionBrowseController
 
 
 class ExtensionBrowseView(QWidget):
-    def __init__(self,folders, excluded_files):
+    def __init__(self):
         super().__init__()
 
 
@@ -15,13 +15,7 @@ class ExtensionBrowseView(QWidget):
 
         self.controller = ExtensionBrowseController()
 
-        self.folders = folders
-        self.controller.refresh_list_widget(self.listView, self.folders)
-
-        self.excluded_files = excluded_files
-
-        self.controller.post_excluded_files(self.excluded_files)
-
+        self.controller.refresh_list_widget(self.listView)
         self.controller.fill_tree_with_data(self.treeView)
 
 
@@ -82,7 +76,7 @@ class ExtensionBrowseView(QWidget):
 
     def connect_signals(self):
 
-        self.pushButton.clicked.connect(lambda: self.controller.combine_items_into_single_list(self.listView, self.treeView))
+        self.pushButton.clicked.connect(lambda: self.controller.add_files_types_to_excluded_files(self.listView, self.treeView))
         self.pushButton_2.clicked.connect(lambda: self.controller.toggle_select_all_items(self.listView))
         self.treeView.itemSelectionChanged.connect(self.on_tree_item_selected)
 

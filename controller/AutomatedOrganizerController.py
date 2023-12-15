@@ -25,9 +25,7 @@ class AutomatedFileOrganizerController:
         self.model.check_current_day(selected_days, remove_duplicates_checkbox, file_overview_tree, excluded_items_tree)
 
     def open_browse_view(self):
-        folders = self.get_selected_folder_paths_automated()
-        excluded_files = self.get_excluded_files()
-        self.browse_view = ExtensionBrowseView(folders,excluded_files )
+        self.browse_view = ExtensionBrowseView()
         self.browse_view.show()
 
     def get_excluded_tree(self, excluded_items_tree):
@@ -36,11 +34,6 @@ class AutomatedFileOrganizerController:
     def get_included_tree(self, file_overview_tree):
         self.model.get_included_tree(file_overview_tree)
 
-    def get_selected_folder_paths_automated(self):
-        return self.model.get_selected_folder_paths_automated()
-
-    def get_excluded_files(self):
-        return self.model.get_excluded_files()
 
     def load_toggle_state(self):
         return self.model.load_toggle_state()

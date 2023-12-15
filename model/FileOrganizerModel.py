@@ -50,6 +50,8 @@ class FileOrganizerModel:
 
             cls._instance.day_checkboxes_dict = {}
 
+            cls._instance.checkbox_states = {}
+
             cls._instance.config = {}
             cls._instance.load_config()
 
@@ -62,17 +64,7 @@ class FileOrganizerModel:
             self._initialized = True
 
 
-    def load_config(self):
-        with open('file_categories.json', 'r') as file:
-            self.config = json.load(file)
-
-    # AUTOMATED
-    def get_excluded_tree(self,tree):
-        self.excluded_tree = tree
-
-    def get_included_tree(self,tree):
-        self.included_tree = tree
-
+    """---- SHARED METHODS ----"""
 
     def select_and_display_folder_contents(self, listWidget, treeWidget, excluded_tree=None):
         # Create options for the file dialog
@@ -104,7 +96,7 @@ class FileOrganizerModel:
                         self.selected_folder_paths_automated.append(folder_path)
 
                         # Update and add the selected folder to the list widget
-                        self.refresh_list_widget(listWidget, self.selected_folder_paths_automated)
+                        self.refresh_list_widget(listWidget)
 
 
                         self.update_tree_views(treeWidget, excluded_tree)
@@ -113,11 +105,211 @@ class FileOrganizerModel:
                         self.selected_folder_paths_manual.append(folder_path)
 
                         # Update and add the selected folder to the list widget
-                        self.refresh_list_widget(listWidget, self.selected_folder_paths_manual)
+                        self.refresh_list_widget(listWidget)
 
                         # Categorize the files
                         self.group_files_by_category(treeWidget, self.selected_folder_paths_manual)
 
+    def toggle_select_all_items(self, list_widget):
+        list_widget.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
+        for index in range(list_widget.count()):
+            item = list_widget.item(index)
+            item.setSelected(True)
+        list_widget.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
+
+    def organize_chosen_files(self,treeWidget, remove_duplicates_checkbox, excluded_tree=None):
+
+        if self.is_automated == False:
+            unchecked_items = self.get_unchecked_items(treeWidget)
+            self.remove_unchecked_items_from_categorized_files(self.categorized_files,unchecked_items)
+
+        def calculate_file_hash(file_path, hash_function=hashlib.md5, buffer_size=65536):
+            hash_obj = hash_function()
+            with open(file_path, 'rb') as file:
+                while True:
+                    data = file.read(buffer_size)
+                    if not data:
+                        break
+                    hash_obj.update(data)
+            return hash_obj.hexdigest()
+
+        def find_and_delete_duplicate_files(directory):
+            # Create a dictionary to store file hashes and their paths
+            file_hashes = {}
+
+            for root, dirs, files in os.walk(directory):
+                for filename in files:
+                    file_path = os.path.join(root, filename)
+                    file_hash = calculate_file_hash(file_path)
+
+                    if file_hash in file_hashes:
+                        # We found a duplicate file
+                        print(f'Duplicate file found: {file_path} and {file_hashes[file_hash]}')
+                        # Delete the duplicate file
+                        os.remove(file_path)
+                        print(f'Deleted duplicate file: {file_path}')
+                    else:
+                        # Add the file hash to the dictionary
+                        file_hashes[file_hash] = file_path
+
+        for folder_path, folders in self.categorized_files.items():
+            print(folder_path)
+            for category, categories in folders.items():
+                print(category)
+                for file_type, file_types in categories.items():
+                    print(file_type)
+                    for file in file_types:
+                        print(file)
+
+                        new_folder_path = os.path.join(folder_path, category, file_type[1:])
+                        os.makedirs(new_folder_path, exist_ok=True)
+
+                        source_file = os.path.join(folder_path, file)
+                        destination_file = os.path.join(new_folder_path, file)
+
+                        # if the file doesnt exist in the directiory
+                        if remove_duplicates_checkbox.isChecked():
+                            print("Checking for duplicates and removing them...")
+                            find_and_delete_duplicate_files(new_folder_path)
+
+                        try:
+                            shutil.move(source_file, destination_file)
+                            print(f"Moved '{file}' to '{destination_file}'")
+                        except Exception as e:
+                            print(f"Error moving '{file}' to '{destination_file}': {e}")
+
+        # After organizing files, refresh the QTreeWidget and re-categorize the files
+        treeWidget.clear()  # Clear the existing items in the QTreeWidget
+        categorized_files = {}  # Clear the categorized_files dictionary
+
+        self.update_tree_views(treeWidget, excluded_tree)
+
+    def fill_tree_with_data(self, treeWidget, file_categories=None, item=None):
+        # Loop through keys and values in the categorized_files_dictionary
+
+        if file_categories == None:
+            file_categories = self.config
+
+        for category_or_extension_name, values in file_categories.items():
+            # If there's no parent item (top-level item):
+            if item is None:
+                # Create a new top-level item in the tree_view
+                tree_view_item = QtWidgets.QTreeWidgetItem(treeWidget)
+                # Set the text of the item to the current key
+                tree_view_item.setText(0, category_or_extension_name)
+            else:
+                # Create a new child item under the parent item
+                tree_view_item = QtWidgets.QTreeWidgetItem(item)
+                # Set the text of the item to the current key
+                tree_view_item.setText(0, category_or_extension_name)
+
+            if not self.is_automated:
+                # Only add checkboxes if is_automated is False
+                tree_view_item.setFlags(tree_view_item.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
+                tree_view_item.setCheckState(0, Qt.Unchecked)
+
+            if isinstance(values, dict):
+                # When it encounters a dictionary as a value, there are nested items or subcategories to be added.
+                self.fill_tree_with_data(treeWidget, values, tree_view_item)
+
+            elif isinstance(values, list):
+                if self.is_browse_window or not self.is_automated:
+
+                    # Loop through each filename in the list
+                    for filename in values:
+                        # Create a new child item under the current item
+                        child = QtWidgets.QTreeWidgetItem(tree_view_item)
+                        # Set the text of the child item to the filename
+                        child.setText(0, filename)
+
+                        if not self.is_automated:
+                            # Add special attributes for user interaction to the child item
+                            child.setFlags(child.flags() | Qt.ItemIsUserCheckable | Qt.ItemIsTristate)
+                            # Set the initial check state of the child item to unchecked
+                            child.setCheckState(0, Qt.Unchecked)
+
+        # After populating the tree with categorized_files, sort the items alphabetically
+        treeWidget.sortItems(0, Qt.AscendingOrder)
+
+    def group_files_by_category(self,treeWidget, selected_folder_paths):
+        # Loop through each selected folder path
+        for source_folder in selected_folder_paths:
+            # Loop through files in the source folder
+            for filename in os.listdir(source_folder):
+                file_extension = os.path.splitext(filename)[1]
+                if file_extension:
+                    # Look for the file extension in the dictionary file_categories
+                    for category, extensions in self.config.items():
+                        if file_extension in extensions:
+                            if source_folder not in self.categorized_files:
+                                # Create an entry for the source folder in the categorized files dictionary
+                                # with an empty dictionary as its value
+                                self.categorized_files[source_folder] = {}
+                            if category not in self.categorized_files[source_folder]:
+                                # Create an entry for the category within the source folder in the categorized files dictionary
+                                # with an empty dictionary as its value
+                                self.categorized_files[source_folder][category] = {}
+                            if file_extension not in self.categorized_files[source_folder][category]:
+                                # Create an empty list with the file extension as the key
+                                self.categorized_files[source_folder][category][file_extension] = []
+                            # Add the file to the file extension list
+                            self.categorized_files[source_folder][category][file_extension].append(filename)
+
+        if self.is_browse_window == False:
+            treeWidget.clear()
+
+            # Populate the tree widget with the categorized files and folders stored in the categorized_files dictionary
+            self.fill_tree_with_data(treeWidget, self.categorized_files)
+
+    def update_tree_views(self, included_tree, excluded_tree=None):
+        """
+        Updates the tree views with categorized and excluded files.
+
+        Parameters:
+        included_tree (QTreeWidget): Tree widget for included files.
+        excluded_tree (QTreeWidget): Optional tree widget for excluded files.
+        """
+        self.clear_and_fill_excluded_tree(excluded_tree)
+        self.group_files_by_category_helper(included_tree)
+        self.remove_excluded_from_categorized()
+        self.fill_included_tree(included_tree)
+
+    def clear_and_fill_excluded_tree(self, excluded_tree):
+        if excluded_tree:
+            excluded_tree.clear()
+            if self.excluded_files:
+                self.fill_tree_with_data(excluded_tree, self.excluded_files)
+
+    def group_files_by_category_helper(self, included_tree):
+        folder_paths = self.selected_folder_paths_automated if self.is_automated else self.selected_folder_paths_manual
+        self.group_files_by_category(included_tree, folder_paths)
+
+    def remove_excluded_from_categorized(self):
+        if self.categorized_files:
+            self.delete_items_from_dict(self.categorized_files, self.excluded_files)
+
+    def delete_items_from_dict(self, target_dict, items_to_delete):
+
+        for key, value in items_to_delete.items():
+
+            if isinstance(value, dict):
+                # Recursively call the function to process nested dictionaries
+                if key in target_dict:
+                    self.delete_items_from_dict(target_dict[key], value)
+                else:
+                    print("lol")
+                    continue
+                # Check if the category is empty after processing
+                if not target_dict[key]:
+                    del target_dict[key]
+            elif key in target_dict:
+                # If the key exists in the target_dict, delete it
+                del target_dict[key]
+
+    def fill_included_tree(self, included_tree):
+        if not self.is_browse_window:
+            included_tree.clear()
+            self.fill_tree_with_data(included_tree, self.categorized_files)
 
     def delete_selected_folder_and_contents(self, listWidget, treeWidget, excluded_tree=None):
         """
@@ -190,9 +382,100 @@ class FileOrganizerModel:
         if selected_item in self.categorized_files:
             del self.categorized_files[selected_item]
 
+    def refresh_list_widget(self,listWidget):
+        # Clear the existing items in the list widget
+        listWidget.clear()
+        # Add the selected folder paths to the list widget
+
+        if self.is_automated == True:
+            selected_folder_paths = self.selected_folder_paths_automated
+        else:
+            selected_folder_paths = self.selected_folder_paths_manual
+
+        listWidget.addItems(selected_folder_paths)
+
+    def get_item_depth(self,tree_item):
+        depth = 0
+        parent = tree_item.parent()
+        while parent is not None:
+            depth += 1
+            parent = parent.parent()
+        return depth
 
 
-    def include_files(self,included_tree, excluded_tree):
+
+    """---- AUTOMATED METHODS ----"""
+
+    def check_saved_items(self,treeWidget):
+
+        # Iterate through the treeWidget items and check those not in checked_items
+        for tree_item in treeWidget.findItems("", QtCore.Qt.MatchContains | QtCore.Qt.MatchRecursive):
+            tree_item.setCheckState(0, QtCore.Qt.Unchecked)
+
+        # Iterate through checked_items and set check state to Checked
+        for folder_path, folders in self.tester.items():
+            for category, categories in folders.items():
+
+                for file_type, file_types in categories.items():
+
+                    file_type_items = treeWidget.findItems(file_type,
+                                                           QtCore.Qt.MatchContains | QtCore.Qt.MatchRecursive)
+
+                    # Check the lower-level tree view items (depth 2)
+                    for item in file_type_items:
+                        itemlol = item.text(0)
+                        file_type_item = item
+                        category_item = file_type_item.parent()
+                        folder_item = category_item.parent()
+
+                        # Get the name of the top-level item from the first column
+                        top_level_name = folder_item.text(0)
+
+                        if top_level_name == folder_path:
+                            item.setCheckState(0, QtCore.Qt.Checked)  # Set the check state to Checked
+
+                            # Check the children of the item
+                            for child_index in range(item.childCount()):
+                                if child_index == 0:
+                                    break
+                                else:
+                                    child_item = item.child(child_index)
+                                    child_item.setCheckState(0, QtCore.Qt.Checked)
+
+                    for file in file_types:
+                        # Find the item in the tree widget
+                        file_items = treeWidget.findItems(file, QtCore.Qt.MatchContains | QtCore.Qt.MatchRecursive)
+
+                        # Check the lower-level tree view items (depth 3)
+                        for item in file_items:
+                            itemlol = item.text(0)
+                            file_type_item = item.parent()
+                            category_item = file_type_item.parent()
+                            folder_item = category_item.parent()
+
+                            # Get the name of the top-level item from the first column
+                            top_level_name = folder_item.text(0)
+
+                            if top_level_name == folder_path:
+                                item.setCheckState(0, QtCore.Qt.Checked)  # Set the check state to Checked
+
+    def check_current_day(self,selected_days, duplicates_checkbox, tree_widget, excluded_tree):
+        # Get the current day (e.g., "Mon", "Tue")
+        current_day = QtCore.QDate.currentDate().toString("ddd")
+        print(current_day)
+
+        # Check if the current day is in the selected days
+        if current_day in selected_days:
+            print("yes today needs to be organized")
+
+            if len(self.categorized_files) != 0:
+                self.organize_chosen_files(tree_widget, duplicates_checkbox, excluded_tree)
+
+
+        else:
+            print("nothing needs to be organized today")
+
+    def include_files(self, included_tree, excluded_tree):
 
         selected_item = excluded_tree.selectedItems()[0]
         depth = self.get_item_depth(selected_item)
@@ -240,7 +523,7 @@ class FileOrganizerModel:
         excluded_tree.clear()
         self.update_tree_views(included_tree, excluded_tree)
 
-    def exclude_files(self,included_tree, excluded_tree):
+    def exclude_files(self, included_tree, excluded_tree):
         excluded_tree.clear()
 
         selected_item = included_tree.selectedItems()[0]
@@ -248,7 +531,6 @@ class FileOrganizerModel:
         depth = self.get_item_depth(selected_item)
 
         current_level = self.excluded_files
-
 
         if depth == 0:
             folder_path = selected_item.text(0)
@@ -304,248 +586,70 @@ class FileOrganizerModel:
         print(self.excluded_files)
         self.update_tree_views(included_tree, excluded_tree)
 
-    def refresh_list_widget(self,listWidget, selected_folder_paths):
-        # Clear the existing items in the list widget
-        listWidget.clear()
-        # Add the selected folder paths to the list widget
-        listWidget.addItems(selected_folder_paths)
+    def get_excluded_tree(self, tree):
+        self.excluded_tree = tree
+
+    def get_included_tree(self, tree):
+        self.included_tree = tree
 
 
-    def update_tree_views(self, included_tree, excluded_tree=None):
-        """
-        Updates the tree views with categorized and excluded files.
 
-        Parameters:
-        included_tree (QTreeWidget): Tree widget for included files.
-        excluded_tree (QTreeWidget): Optional tree widget for excluded files.
-        """
-        self.clear_and_fill_excluded_tree(excluded_tree)
-        self.group_files_by_category_helper(included_tree)
-        self.remove_excluded_from_categorized()
-        self.fill_included_tree(included_tree)
+    """---- MANUAL METHODS ----"""
 
-    def clear_and_fill_excluded_tree(self, excluded_tree):
-        if excluded_tree:
-            excluded_tree.clear()
-            if self.excluded_files:
-                self.fill_tree_with_data(excluded_tree, self.excluded_files)
+    def get_unchecked_items(self, treeWidget):
+        unchecked_items = []
 
-    def group_files_by_category_helper(self, included_tree):
-        folder_paths = self.selected_folder_paths_automated if self.is_automated else self.selected_folder_paths_manual
-        self.group_files_by_category(included_tree, folder_paths)
+        # Iterating over each top-level item in the tree
+        for i in range(treeWidget.topLevelItemCount()):
+            top_item = treeWidget.topLevelItem(i)
 
-    def remove_excluded_from_categorized(self):
-        if self.categorized_files:
-            self.delete_items_from_dict(self.categorized_files, self.excluded_files)
+            # Iterating over second-level child items
+            for j in range(top_item.childCount()):
+                second_level_item = top_item.child(j)
 
-    def fill_included_tree(self, included_tree):
-        if not self.is_browse_window:
-            included_tree.clear()
-            self.fill_tree_with_data(included_tree, self.categorized_files)
+                # Iterating over third-level child items
+                for k in range(second_level_item.childCount()):
+                    third_level_item = second_level_item.child(k)
 
+                    # Iterating over fourth-level child items
+                    for l in range(third_level_item.childCount()):
+                        fourth_level_item = third_level_item.child(l)
 
-    def fill_tree_with_data(self, treeWidget, file_categories=None, item=None):
-        # Loop through keys and values in the categorized_files_dictionary
+                        # Check if the fourth-level item is unchecked
+                        if fourth_level_item.checkState(0) != QtCore.Qt.Checked:
+                            unchecked_items.append(
+                                fourth_level_item.text(0))  # Assuming the item's text is the identifier
 
-        if file_categories == None:
-            file_categories = self.config
+        return unchecked_items
 
-        for category_or_extension_name, values in file_categories.items():
-            # If there's no parent item (top-level item):
-            if item is None:
-                # Create a new top-level item in the tree_view
-                tree_view_item = QtWidgets.QTreeWidgetItem(treeWidget)
-                # Set the text of the item to the current key
-                tree_view_item.setText(0, category_or_extension_name)
-            else:
-                # Create a new child item under the parent item
-                tree_view_item = QtWidgets.QTreeWidgetItem(item)
-                # Set the text of the item to the current key
-                tree_view_item.setText(0, category_or_extension_name)
+    def remove_unchecked_items_from_categorized_files(self,categorized_files, unchecked_items):
+        for category, subcategories in list(categorized_files.items()):
+            for subcategory, filetypes in list(subcategories.items()):
+                for filetype, files in list(filetypes.items()):
+                    # Filter out unchecked items from the fourth level
+                    categorized_files[category][subcategory][filetype] = [
+                        file for file in files if file not in unchecked_items
+                    ]
 
-            if not self.is_automated:
-                # Only add checkboxes if is_automated is False
-                tree_view_item.setFlags(tree_view_item.flags() | Qt.ItemIsTristate | Qt.ItemIsUserCheckable)
-                tree_view_item.setCheckState(0, Qt.Unchecked)
+                    # Remove empty file types
+                    if not categorized_files[category][subcategory][filetype]:
+                        del categorized_files[category][subcategory][filetype]
 
-            if isinstance(values, dict):
-                # When it encounters a dictionary as a value, there are nested items or subcategories to be added.
-                self.fill_tree_with_data(treeWidget, values, tree_view_item)
+                # Remove empty subcategories
+                if not categorized_files[category][subcategory]:
+                    del categorized_files[category][subcategory]
 
-            elif isinstance(values, list):
-                if self.is_browse_window or not self.is_automated:
+            # Remove empty categories
+            if not categorized_files[category]:
+                del categorized_files[category]
 
-                    # Loop through each filename in the list
-                    for filename in values:
-                        # Create a new child item under the current item
-                        child = QtWidgets.QTreeWidgetItem(tree_view_item)
-                        # Set the text of the child item to the filename
-                        child.setText(0, filename)
-
-                        if not self.is_automated:
-                            # Add special attributes for user interaction to the child item
-                            child.setFlags(child.flags() | Qt.ItemIsUserCheckable | Qt.ItemIsTristate)
-                            # Set the initial check state of the child item to unchecked
-                            child.setCheckState(0, Qt.Unchecked)
-
-        # After populating the tree with categorized_files, sort the items alphabetically
-        treeWidget.sortItems(0, Qt.AscendingOrder)
+        return categorized_files
 
 
-    def delete_items_from_dict(self,target_dict, items_to_delete):
 
-        for key, value in items_to_delete.items():
+    """---- BROWSE METHODS ----"""
 
-            if isinstance(value, dict):
-                # Recursively call the function to process nested dictionaries
-                if key in target_dict:
-                    self.delete_items_from_dict(target_dict[key], value)
-                else:
-                    print("lol")
-                    continue
-                # Check if the category is empty after processing
-                if not target_dict[key]:
-                    del target_dict[key]
-            elif key in target_dict:
-                # If the key exists in the target_dict, delete it
-                del target_dict[key]
-
-    def group_files_by_category(self,treeWidget, selected_folder_paths):
-        # Loop through each selected folder path
-        for source_folder in selected_folder_paths:
-            # Loop through files in the source folder
-            for filename in os.listdir(source_folder):
-                file_extension = os.path.splitext(filename)[1]
-                if file_extension:
-                    # Look for the file extension in the dictionary file_categories
-                    for category, extensions in self.config.items():
-                        if file_extension in extensions:
-                            if source_folder not in self.categorized_files:
-                                # Create an entry for the source folder in the categorized files dictionary
-                                # with an empty dictionary as its value
-                                self.categorized_files[source_folder] = {}
-                            if category not in self.categorized_files[source_folder]:
-                                # Create an entry for the category within the source folder in the categorized files dictionary
-                                # with an empty dictionary as its value
-                                self.categorized_files[source_folder][category] = {}
-                            if file_extension not in self.categorized_files[source_folder][category]:
-                                # Create an empty list with the file extension as the key
-                                self.categorized_files[source_folder][category][file_extension] = []
-                            # Add the file to the file extension list
-                            self.categorized_files[source_folder][category][file_extension].append(filename)
-
-        if self.is_browse_window == False:
-            treeWidget.clear()
-
-            # Populate the tree widget with the categorized files and folders stored in the categorized_files dictionary
-            self.fill_tree_with_data(treeWidget, self.categorized_files)
-
-    def get_item_depth(self,tree_item):
-        depth = 0
-        parent = tree_item.parent()
-        while parent is not None:
-            depth += 1
-            parent = parent.parent()
-        return depth
-
-    def organize_chosen_files(self,treeWidget, remove_duplicates_checkbox, excluded_tree=None):
-
-        if self.is_automated == False:
-            unchecked_items = self.get_unchecked_items(treeWidget)
-            self.remove_unchecked_items_from_categorized_files(self.categorized_files,unchecked_items)
-
-        def calculate_file_hash(file_path, hash_function=hashlib.md5, buffer_size=65536):
-            hash_obj = hash_function()
-            with open(file_path, 'rb') as file:
-                while True:
-                    data = file.read(buffer_size)
-                    if not data:
-                        break
-                    hash_obj.update(data)
-            return hash_obj.hexdigest()
-
-        def find_and_delete_duplicate_files(directory):
-            # Create a dictionary to store file hashes and their paths
-            file_hashes = {}
-
-            for root, dirs, files in os.walk(directory):
-                for filename in files:
-                    file_path = os.path.join(root, filename)
-                    file_hash = calculate_file_hash(file_path)
-
-                    if file_hash in file_hashes:
-                        # We found a duplicate file
-                        print(f'Duplicate file found: {file_path} and {file_hashes[file_hash]}')
-                        # Delete the duplicate file
-                        os.remove(file_path)
-                        print(f'Deleted duplicate file: {file_path}')
-                    else:
-                        # Add the file hash to the dictionary
-                        file_hashes[file_hash] = file_path
-
-        for folder_path, folders in self.categorized_files.items():
-            print(folder_path)
-            for category, categories in folders.items():
-                print(category)
-                for file_type, file_types in categories.items():
-                    print(file_type)
-                    for file in file_types:
-                        print(file)
-
-                        new_folder_path = os.path.join(folder_path, category, file_type[1:])
-                        os.makedirs(new_folder_path, exist_ok=True)
-
-                        source_file = os.path.join(folder_path, file)
-                        destination_file = os.path.join(new_folder_path, file)
-
-                        # if the file doesnt exist in the directiory
-                        if remove_duplicates_checkbox.isChecked():
-                            print("Checking for duplicates and removing them...")
-                            find_and_delete_duplicate_files(new_folder_path)
-
-                        try:
-                            shutil.move(source_file, destination_file)
-                            print(f"Moved '{file}' to '{destination_file}'")
-                        except Exception as e:
-                            print(f"Error moving '{file}' to '{destination_file}': {e}")
-
-        # After organizing files, refresh the QTreeWidget and re-categorize the files
-        treeWidget.clear()  # Clear the existing items in the QTreeWidget
-        categorized_files = {}  # Clear the categorized_files dictionary
-
-        self.update_tree_views(treeWidget, excluded_tree)
-
-    def check_current_day(self,selected_days, duplicates_checkbox, tree_widget, excluded_tree):
-        # Get the current day (e.g., "Mon", "Tue")
-        current_day = QtCore.QDate.currentDate().toString("ddd")
-        print(current_day)
-
-        # Check if the current day is in the selected days
-        if current_day in selected_days:
-            print("yes today needs to be organized")
-
-            if len(self.categorized_files) != 0:
-                self.organize_chosen_files(tree_widget, duplicates_checkbox, excluded_tree)
-
-
-        else:
-            print("nothing needs to be organized today")
-
-    def get_selected_folder_paths_automated(self):
-        return self.selected_folder_paths_automated
-
-    def get_excluded_files(self):
-        return self.excluded_files
-
-    def toggle_select_all_items(self, list_widget):
-        list_widget.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
-        for index in range(list_widget.count()):
-            item = list_widget.item(index)
-            item.setSelected(True)
-        list_widget.setSelectionMode(QtWidgets.QAbstractItemView.SingleSelection)
-
-
-    def combine_items_into_single_list(self, folder_list, items_tree):
+    def add_files_types_to_excluded_files(self, folder_list, items_tree):
         selected_folders = folder_list.selectedItems()
 
         selected_item = items_tree.selectedItems()[0]
@@ -597,115 +701,18 @@ class FileOrganizerModel:
 
         print(self.excluded_files)
 
-    def get_unchecked_items(self, treeWidget):
-        unchecked_items = []
 
-        # Iterating over each top-level item in the tree
-        for i in range(treeWidget.topLevelItemCount()):
-            top_item = treeWidget.topLevelItem(i)
 
-            # Iterating over second-level child items
-            for j in range(top_item.childCount()):
-                second_level_item = top_item.child(j)
+    """---- JSON ----"""
 
-                # Iterating over third-level child items
-                for k in range(second_level_item.childCount()):
-                    third_level_item = second_level_item.child(k)
+    def load_config(self):
+        with open('file_categories.json', 'r') as file:
+            self.config = json.load(file)
 
-                    # Iterating over fourth-level child items
-                    for l in range(third_level_item.childCount()):
-                        fourth_level_item = third_level_item.child(l)
-
-                        # Check if the fourth-level item is unchecked
-                        if fourth_level_item.checkState(0) != QtCore.Qt.Checked:
-                            unchecked_items.append(
-                                fourth_level_item.text(0))  # Assuming the item's text is the identifier
-
-        return unchecked_items
-
-    def remove_unchecked_items_from_categorized_files(self,categorized_files, unchecked_items):
-        for category, subcategories in list(categorized_files.items()):
-            for subcategory, filetypes in list(subcategories.items()):
-                for filetype, files in list(filetypes.items()):
-                    # Filter out unchecked items from the fourth level
-                    categorized_files[category][subcategory][filetype] = [
-                        file for file in files if file not in unchecked_items
-                    ]
-
-                    # Remove empty file types
-                    if not categorized_files[category][subcategory][filetype]:
-                        del categorized_files[category][subcategory][filetype]
-
-                # Remove empty subcategories
-                if not categorized_files[category][subcategory]:
-                    del categorized_files[category][subcategory]
-
-            # Remove empty categories
-            if not categorized_files[category]:
-                del categorized_files[category]
-
-        return categorized_files
-
-    def check_saved_items(self,treeWidget):
-
-        # Iterate through the treeWidget items and check those not in checked_items
-        for tree_item in treeWidget.findItems("", QtCore.Qt.MatchContains | QtCore.Qt.MatchRecursive):
-            tree_item.setCheckState(0, QtCore.Qt.Unchecked)
-
-        # Iterate through checked_items and set check state to Checked
-        for folder_path, folders in self.tester.items():
-            for category, categories in folders.items():
-
-                for file_type, file_types in categories.items():
-
-                    file_type_items = treeWidget.findItems(file_type,
-                                                           QtCore.Qt.MatchContains | QtCore.Qt.MatchRecursive)
-
-                    # Check the lower-level tree view items (depth 2)
-                    for item in file_type_items:
-                        itemlol = item.text(0)
-                        file_type_item = item
-                        category_item = file_type_item.parent()
-                        folder_item = category_item.parent()
-
-                        # Get the name of the top-level item from the first column
-                        top_level_name = folder_item.text(0)
-
-                        if top_level_name == folder_path:
-                            item.setCheckState(0, QtCore.Qt.Checked)  # Set the check state to Checked
-
-                            # Check the children of the item
-                            for child_index in range(item.childCount()):
-                                if child_index == 0:
-                                    break
-                                else:
-                                    child_item = item.child(child_index)
-                                    child_item.setCheckState(0, QtCore.Qt.Checked)
-
-                    for file in file_types:
-                        # Find the item in the tree widget
-                        file_items = treeWidget.findItems(file, QtCore.Qt.MatchContains | QtCore.Qt.MatchRecursive)
-
-                        # Check the lower-level tree view items (depth 3)
-                        for item in file_items:
-                            itemlol = item.text(0)
-                            file_type_item = item.parent()
-                            category_item = file_type_item.parent()
-                            folder_item = category_item.parent()
-
-                            # Get the name of the top-level item from the first column
-                            top_level_name = folder_item.text(0)
-
-                            if top_level_name == folder_path:
-                                item.setCheckState(0, QtCore.Qt.Checked)  # Set the check state to Checked
-
-    # JSON
-    # Function to save the state of the "Remove Duplicates" checkbox
     def save_remove_duplicates_state(self, state):
         with open('remove_duplicates_state.pickle', 'wb') as file:
             pickle.dump(state, file)
 
-    # Function to load the state of the "Remove Duplicates" checkbox
     def load_remove_duplicates_state(self):
         try:
             with open('remove_duplicates_state.pickle', 'rb') as file:
@@ -714,14 +721,12 @@ class FileOrganizerModel:
         except FileNotFoundError:
             return False  # Default to False if the file doesn't exist or hasn't been saved yet
 
-    # Function to save the dictionary to a file
     def save_excluded_files(self):
         # Check if the dictionary is not empty before saving
         if self.excluded_files:
             with open("excluded_files.json", 'w') as file:
                 json.dump(self.excluded_files, file)
 
-    # Function to load the dictionary from a file
     def load_excluded_files(self, included_tree, excluded_tree):
         try:
             with open("excluded_files.json", 'r') as file:
@@ -738,9 +743,6 @@ class FileOrganizerModel:
         if self.is_automated:
             self.folders = self.selected_folder_paths_automated
             json_string = "selected_folders_automated.json"
-        else:
-            self.folders = self.selected_folder_paths_manual
-            json_string = "selected_folders_manual.json"
 
         # Check if the list is not empty before saving
         if self.folders:
@@ -750,8 +752,6 @@ class FileOrganizerModel:
     def load_selected_folders(self, listWidget, treeWidget):
         if self.is_automated:
             json_string = "selected_folders_automated.json"
-        else:
-            json_string = "selected_folders_manual.json"
 
         if os.path.exists(json_string):
             # Check if the file is not empty before loading
@@ -760,13 +760,19 @@ class FileOrganizerModel:
                     folders = json.load(json_file)
                     if self.is_automated:
                         self.selected_folder_paths_automated = folders
-                    else:
-                        self.selected_folder_paths_manual = folders
 
-                    self.refresh_list_widget(listWidget, folders)  # Update the list widget with the loaded folder paths
+
+                    self.refresh_list_widget(listWidget)  # Update the list widget with the loaded folder paths
                     self.group_files_by_category(treeWidget, folders)
             else:
                 print(f"{json_string} is empty.")
+
+    def save_checked_items(self):
+        if self.is_automated:
+            # Check if the dictionary is not empty before saving
+            if self.tester:
+                with open("checked_items.json", "w") as json_file:
+                    json.dump(self.tester, json_file)
 
     def load_checked_items(self, treeWidget):
         if self.is_automated:
@@ -779,15 +785,6 @@ class FileOrganizerModel:
                         self.check_saved_items(treeWidget)
                 else:
                     print("checked_items.json is empty.")
-
-    def save_checked_items(self):
-        if self.is_automated:
-            # Check if the dictionary is not empty before saving
-            if self.tester:
-                with open("checked_items.json", "w") as json_file:
-                    json.dump(self.tester, json_file)
-
-    checkbox_states = {}
 
     def save_selected_days(self, day_checkboxes_dict):
         if day_checkboxes_dict:
@@ -821,10 +818,3 @@ class FileOrganizerModel:
         else:
             self.is_toggled = False
             return self.is_toggled
-
-
-
-
-
-
-

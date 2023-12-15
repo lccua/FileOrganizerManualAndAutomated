@@ -291,35 +291,6 @@ class AutomatedOrganizerView(QWidget):
         self.automate_label_layout.setObjectName("automate_label_layout")
         self.automate_label_layout.addWidget(self.automate_label)
 
-        # Create a container for the icon with text
-        self.icon_text_container = QtWidgets.QWidget(self)
-        self.icon_text_container.setGeometry(QtCore.QRect(825, 736, 350, 90))
-        self.icon_text_container.setObjectName("icon_text_container")
-
-        # Create a layout for the icon with text
-        self.icon_text_layout = QtWidgets.QHBoxLayout(self.icon_text_container)
-        self.icon_text_layout.setAlignment(QtCore.Qt.AlignRight | QtCore.Qt.AlignBottom)
-
-        # Create a label for the icon
-        self.icon_label = QLabel(self)
-        icon = QtGui.QIcon("true_icon.png")  # Replace with the path to your icon image
-        self.icon_label.setPixmap(icon.pixmap(32, 32))  # Adjust the size as needed
-        self.icon_label.setAlignment(QtCore.Qt.AlignRight)
-        self.icon_text_layout.addWidget(self.icon_label)
-
-        # Create a label for the text
-        self.text_label = QLabel(self)
-        self.text_label.setText("All files under specific categories <b>(e.g., Documents)</b> or file types <b>(e.g., mp3)</b> with this particular icon will be excluded from any future file organizing.")
-        self.text_label.setAlignment(QtCore.Qt.AlignLeft | QtCore.Qt.AlignVCenter)
-
-        self.text_label.setWordWrap(True)  # Enable word wrapping
-        self.text_label.setOpenExternalLinks(True)  # Allow links if needed
-        self.text_label.setTextFormat(QtCore.Qt.RichText)  # Use HTML formatting
-        self.text_label.setFixedWidth(260)
-        self.icon_text_layout.addWidget(self.text_label)
-
-        # Add the icon with text layout to the main layout
-        self.main_horizontal_layout.addLayout(self.icon_text_layout)
 
     # button and event connection
     def connect_signals(self):
