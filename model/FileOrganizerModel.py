@@ -23,7 +23,6 @@ class FileOrganizerModel:
         if cls._instance is None:
             cls._instance = super(FileOrganizerModel, cls).__new__(cls)
 
-            # Initialize class variables here
             cls._instance.is_automated = None
             cls._instance.is_toggled = False
             cls._instance.is_browse_window = None
@@ -31,17 +30,14 @@ class FileOrganizerModel:
             cls._instance.included_tree = None
             cls._instance.excluded_tree = None
 
-            cls._instance.selected_days = []
 
             cls._instance.checked_items = {}
 
-            cls._instance.final_checked_items = {}
 
             cls._instance.categorized_files = {}
             cls._instance.tester = {}
             cls._instance.excluded_files = {}
 
-            cls._instance.exclusion_status = {}
 
             cls._instance.checkboxes = {}
 
@@ -466,8 +462,8 @@ class FileOrganizerModel:
         print(current_day)
 
         # Check if the current day is in the selected days
-        if current_day in self.day_checkboxes_dict.keys():
-            print("yes today needs to be organized")
+        if self.day_checkboxes_dict.get(current_day, False):
+            print("starting automation")
 
             if len(self.categorized_files) != 0:
                 self.organize_chosen_files(file_overview_tree, remove_duplicates_checkbox, excluded_items_tree)
@@ -771,7 +767,6 @@ class FileOrganizerModel:
                         json.dump(existing_folders, json_file)
 
                     self.refresh_list_widget(listWidget)  # Update the list widget with the loaded folder paths
-                    self.group_files_by_category(treeWidget, existing_folders)
             else:
                 print(f"{json_string} is empty.")
 
