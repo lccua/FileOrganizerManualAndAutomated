@@ -393,7 +393,7 @@ class AutomatedOrganizerView(QWidget):
     def check_automation_toggle(self):
         if self.is_toggled == True:
             print("automation button works")
-            self.controller.check_current_day(self.selected_days, self.remove_duplicates_checkbox,self.file_overview_tree, self.excluded_items_tree)
+            self.controller.check_current_day(self.file_overview_tree, self.remove_duplicates_checkbox, self.excluded_items_tree)
         else:
             print("normale gang van zaken")
 

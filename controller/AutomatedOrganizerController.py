@@ -21,8 +21,8 @@ class AutomatedFileOrganizerController:
     def exclude_files(self, file_overview_tree, excluded_items_tree):
         self.model.exclude_files(file_overview_tree, excluded_items_tree)
 
-    def check_current_day(self, selected_days, remove_duplicates_checkbox, file_overview_tree, excluded_items_tree):
-        self.model.check_current_day(selected_days, remove_duplicates_checkbox, file_overview_tree, excluded_items_tree)
+    def check_current_day(self, file_overview_tree, remove_duplicates_checkbox, excluded_items_tree):
+        self.model.check_current_day(file_overview_tree, remove_duplicates_checkbox, excluded_items_tree)
 
     def open_browse_view(self):
         self.browse_view = ExtensionBrowseView()

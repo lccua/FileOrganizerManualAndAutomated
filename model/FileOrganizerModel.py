@@ -180,7 +180,7 @@ class FileOrganizerModel:
 
         # After organizing files, refresh the QTreeWidget and re-categorize the files
         treeWidget.clear()  # Clear the existing items in the QTreeWidget
-        categorized_files = {}  # Clear the categorized_files dictionary
+        self.categorized_files = {}  # Clear the categorized_files dictionary
 
         self.update_tree_views(treeWidget, excluded_tree)
 
@@ -232,7 +232,8 @@ class FileOrganizerModel:
         treeWidget.sortItems(0, Qt.AscendingOrder)
 
     def group_files_by_category(self,treeWidget, selected_folder_paths):
-        # Loop through each selected folder path
+        self.categorized_files = {}
+
         for source_folder in selected_folder_paths:
             # Loop through files in the source folder
             for filename in os.listdir(source_folder):
@@ -459,17 +460,17 @@ class FileOrganizerModel:
                             if top_level_name == folder_path:
                                 item.setCheckState(0, QtCore.Qt.Checked)  # Set the check state to Checked
 
-    def check_current_day(self,selected_days, duplicates_checkbox, tree_widget, excluded_tree):
+    def check_current_day(self, file_overview_tree, remove_duplicates_checkbox, excluded_items_tree):
         # Get the current day (e.g., "Mon", "Tue")
         current_day = QtCore.QDate.currentDate().toString("ddd")
         print(current_day)
 
         # Check if the current day is in the selected days
-        if current_day in selected_days:
+        if current_day in self.day_checkboxes_dict.keys():
             print("yes today needs to be organized")
 
             if len(self.categorized_files) != 0:
-                self.organize_chosen_files(tree_widget, duplicates_checkbox, excluded_tree)
+                self.organize_chosen_files(file_overview_tree, remove_duplicates_checkbox, excluded_items_tree)
 
 
         else:
@@ -758,12 +759,19 @@ class FileOrganizerModel:
             if os.path.getsize(json_string) > 0:
                 with open(json_string, "r") as json_file:
                     folders = json.load(json_file)
-                    if self.is_automated:
-                        self.selected_folder_paths_automated = folders
 
+                    # Filter out non-existing folder paths
+                    existing_folders = [folder for folder in folders if os.path.exists(folder)]
+
+                    if self.is_automated:
+                        self.selected_folder_paths_automated = existing_folders
+
+                    # Update the JSON file with the filtered list
+                    with open(json_string, "w") as json_file:
+                        json.dump(existing_folders, json_file)
 
                     self.refresh_list_widget(listWidget)  # Update the list widget with the loaded folder paths
-                    self.group_files_by_category(treeWidget, folders)
+                    self.group_files_by_category(treeWidget, existing_folders)
             else:
                 print(f"{json_string} is empty.")
 
@@ -795,7 +803,8 @@ class FileOrganizerModel:
     def load_selected_days(self):
         try:
             with open('checkbox_states.json', 'r') as f:
-                return json.load(f)
+                self.day_checkboxes_dict = json.load(f)
+                return self.day_checkboxes_dict
         except FileNotFoundError:
             return {}
 
