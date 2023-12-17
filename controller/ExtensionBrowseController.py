@@ -1,22 +1,28 @@
-from model.FileOrganizerModel import FileOrganizerModel
+from model.FileBrowserModel import FileBrowserModel
+from model.SharedFileOrganizerModel import SharedFileOrganizerModel
+from model.FileOrganizerStateManager import FileOrganizerStateManager
+
 
 
 class ExtensionBrowseController:
     def __init__(self):
-        self.model = FileOrganizerModel()
+        self.browse_model = FileBrowserModel()
+        self.shared_model = SharedFileOrganizerModel()
+        self.state = FileOrganizerStateManager()
 
-        self.model.is_automated = True
-        self.model.is_browse_window = True
+
+        self.state.is_automated = True
+        self.state.is_browse_window = True
 
 
     def add_files_types_to_excluded_files(self,listView, treeView):
-        self.model.add_files_types_to_excluded_files(listView, treeView)
+        self.browse_model.add_files_types_to_excluded_files(listView, treeView)
 
     def toggle_select_all_items(self, listView):
-        self.model.toggle_select_all_items(listView)
+        self.shared_model.toggle_select_all_items(listView)
 
     def refresh_list_widget(self,list_view):
-        self.model.refresh_list_widget(list_view)
+        self.shared_model.refresh_list_widget(list_view)
 
     def fill_tree_with_data(self, treeView):
-        self.model.fill_tree_with_data(treeView)
+        self.shared_model.fill_tree_with_data(treeView)

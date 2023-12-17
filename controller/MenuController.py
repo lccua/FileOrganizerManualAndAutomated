@@ -2,14 +2,11 @@
 
 from view.ManualOrganizerView import ManualOrganizerView
 from view.AutomatedOrganizerView import AutomatedOrganizerView
-from model.FileOrganizerModel import FileOrganizerModel
 
 
 class MenuController:
     def __init__(self):
-
-        self.model = FileOrganizerModel()
-
+        pass
 
     def open_automated_window(self):
         automated_view = AutomatedOrganizerView()

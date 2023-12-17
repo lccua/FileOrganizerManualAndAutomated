@@ -37,7 +37,7 @@ class AutomatedOrganizerView(QWidget):
 
 
 
-        self.controller.load_selected_folders(self.folder_selector_list, self.file_overview_tree)
+        self.controller.load_selected_folders(self.folder_selector_list)
 
         self.controller.load_excluded_files(self.file_overview_tree, self.excluded_items_tree)
 
