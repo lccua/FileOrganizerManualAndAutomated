@@ -18,7 +18,6 @@ class FileOrganizerStateManager:
             cls._instance.checked_items = {}
 
             cls._instance.categorized_files = {}
-            cls._instance.tester = {}
             cls._instance.excluded_files = {}
 
             cls._instance.checkboxes = {}

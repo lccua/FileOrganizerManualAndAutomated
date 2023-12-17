@@ -19,7 +19,7 @@ class ExtensionBrowseController:
         self.browse_model.add_files_types_to_excluded_files(listView, treeView)
 
     def toggle_select_all_items(self, listView):
-        self.shared_model.toggle_select_all_items(listView)
+        self.browse_model.toggle_select_all_items(listView)
 
     def refresh_list_widget(self,list_view):
         self.shared_model.refresh_list_widget(list_view)

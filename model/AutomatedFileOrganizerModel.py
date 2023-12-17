@@ -1,18 +1,13 @@
 # model.py
-import hashlib
-import pickle
-import shutil
+
 
 # third party imports
-from PyQt5 import QtCore, QtWidgets
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QFileDialog, QMessageBox
-
+from PyQt5 import QtCore
 
 # system imports
 import os
 import json
+import pickle
 
 # local imports
 from model.SharedFileOrganizerModel import SharedFileOrganizerModel
@@ -25,7 +20,6 @@ class AutomatedFileOrganizerModel:
         self.shared_model = SharedFileOrganizerModel()
         self.manual_model = ManualFileOrganizerModel()
         self.state = FileOrganizerStateManager()
-
 
 
     """---- AUTOMATED METHODS ----"""
@@ -145,7 +139,7 @@ class AutomatedFileOrganizerModel:
 
         print(self.state.excluded_files)
         excluded_tree.clear()
-        self.shared_model.update_tree_views(included_tree, excluded_tree)
+        self.shared_model.update_tree_views_helper(included_tree, excluded_tree)
 
     def exclude_files(self, included_tree, excluded_tree):
         excluded_tree.clear()
@@ -208,7 +202,7 @@ class AutomatedFileOrganizerModel:
                 current_level[folder_path][category][file_type] = []
 
         print(self.state.excluded_files)
-        self.shared_model.update_tree_views(included_tree, excluded_tree)
+        self.shared_model.update_tree_views_helper(included_tree, excluded_tree)
 
     def get_excluded_tree(self, tree):
         self.state.excluded_tree = tree
@@ -242,20 +236,17 @@ class AutomatedFileOrganizerModel:
                 # Check if the file is not empty before loading
                 if os.path.getsize("excluded_files.json") > 0:
                     self.state.excluded_files = json.load(file)
-                    self.shared_model.update_tree_views(included_tree, excluded_tree)
+                    self.shared_model.update_tree_views_helper(included_tree, excluded_tree)
                 else:
                     print("excluded_files.json is empty.")
         except FileNotFoundError:
             print("excluded_files.json not found.")
 
     def save_selected_folders(self):
-        self.folders = self.state.selected_folder_paths_automated
         json_string = "selected_folders_automated.json"
 
-        # Check if the list is not empty before saving
-        if self.folders:
-            with open(json_string, "w") as json_file:
-                json.dump(self.folders, json_file)
+        with open(json_string, "w") as json_file:
+            json.dump(self.state.selected_folder_paths_automated, json_file)
 
     def load_selected_folders(self, listWidget):
         json_string = "selected_folders_automated.json"

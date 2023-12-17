@@ -173,5 +173,3 @@ class ManualOrganizerView(QWidget):
         self.add_folder_button.clicked.connect(
             lambda: self.controller.select_and_display_folder_contents(self.folder_selector_list, self.file_overview_tree))
 
-        self.select_all_button.clicked.connect(
-            lambda: self.controller.toggle_select_all_items(self.file_overview_tree))

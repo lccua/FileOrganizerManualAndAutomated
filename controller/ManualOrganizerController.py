@@ -16,8 +16,6 @@ class ManualFileOrganizerController:
     def select_and_display_folder_contents(self, folder_selector_list, file_overview_tree):
         self.shared_model.select_and_display_folder_contents(folder_selector_list, file_overview_tree)
 
-    def toggle_select_all_items(self, file_overview_tree):
-        self.shared_model.toggle_select_all_items(file_overview_tree)
 
     def organize_chosen_files(self, file_overview_tree, remove_duplicates_checkbox):
         self.shared_model.organize_chosen_files(file_overview_tree,remove_duplicates_checkbox)
