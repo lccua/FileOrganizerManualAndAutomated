@@ -80,7 +80,7 @@ class SharedFileOrganizerModel:
 
         if self.state.is_automated == False:
             unchecked_items = self.manual_model.get_unchecked_items(treeWidget)
-            self.manual_model.remove_unchecked_items_from_categorized_files(self.categorized_files, unchecked_items)
+            self.manual_model.remove_unchecked_items_from_categorized_files(self.state.categorized_files, unchecked_items)
 
         def calculate_file_hash(file_path, hash_function=hashlib.md5, buffer_size=65536):
             hash_obj = hash_function()
@@ -111,7 +111,7 @@ class SharedFileOrganizerModel:
                         # Add the file hash to the dictionary
                         file_hashes[file_hash] = file_path
 
-        for folder_path, folders in self.categorized_files.items():
+        for folder_path, folders in self.state.categorized_files.items():
             print(folder_path)
             for category, categories in folders.items():
                 print(category)
@@ -139,7 +139,7 @@ class SharedFileOrganizerModel:
 
         # After organizing files, refresh the QTreeWidget and re-categorize the files
         treeWidget.clear()  # Clear the existing items in the QTreeWidget
-        self.categorized_files = {}  # Clear the categorized_files dictionary
+        self.state.categorized_files = {}  # Clear the categorized_files dictionary
 
         self.update_tree_views(treeWidget, excluded_tree)
 
@@ -191,7 +191,7 @@ class SharedFileOrganizerModel:
         treeWidget.sortItems(0, Qt.AscendingOrder)
 
     def group_files_by_category(self, treeWidget, selected_folder_paths):
-        self.categorized_files = {}
+        self.state.categorized_files = {}
 
         for source_folder in selected_folder_paths:
             # Loop through files in the source folder
@@ -201,25 +201,25 @@ class SharedFileOrganizerModel:
                     # Look for the file extension in the dictionary file_categories
                     for category, extensions in self.state.config.items():
                         if file_extension in extensions:
-                            if source_folder not in self.categorized_files:
+                            if source_folder not in self.state.categorized_files:
                                 # Create an entry for the source folder in the categorized files dictionary
                                 # with an empty dictionary as its value
-                                self.categorized_files[source_folder] = {}
-                            if category not in self.categorized_files[source_folder]:
+                                self.state.categorized_files[source_folder] = {}
+                            if category not in self.state.categorized_files[source_folder]:
                                 # Create an entry for the category within the source folder in the categorized files dictionary
                                 # with an empty dictionary as its value
-                                self.categorized_files[source_folder][category] = {}
-                            if file_extension not in self.categorized_files[source_folder][category]:
+                                self.state.categorized_files[source_folder][category] = {}
+                            if file_extension not in self.state.categorized_files[source_folder][category]:
                                 # Create an empty list with the file extension as the key
-                                self.categorized_files[source_folder][category][file_extension] = []
+                                self.state.categorized_files[source_folder][category][file_extension] = []
                             # Add the file to the file extension list
-                            self.categorized_files[source_folder][category][file_extension].append(filename)
+                            self.state.categorized_files[source_folder][category][file_extension].append(filename)
 
         if self.state.is_browse_window == False:
             treeWidget.clear()
 
             # Populate the tree widget with the categorized files and folders stored in the categorized_files dictionary
-            self.fill_tree_with_data(treeWidget, self.categorized_files)
+            self.fill_tree_with_data(treeWidget, self.state.categorized_files)
 
     def update_tree_views(self, included_tree, excluded_tree=None):
         """
@@ -245,8 +245,8 @@ class SharedFileOrganizerModel:
         self.group_files_by_category(included_tree, folder_paths)
 
     def remove_excluded_from_categorized(self):
-        if self.categorized_files:
-            self.delete_items_from_dict(self.categorized_files, self.state.excluded_files)
+        if self.state.categorized_files:
+            self.delete_items_from_dict(self.state.categorized_files, self.state.excluded_files)
 
     def delete_items_from_dict(self, target_dict, items_to_delete):
 
@@ -269,7 +269,7 @@ class SharedFileOrganizerModel:
     def fill_included_tree(self, included_tree):
         if not self.state.is_browse_window:
             included_tree.clear()
-            self.fill_tree_with_data(included_tree, self.categorized_files)
+            self.fill_tree_with_data(included_tree, self.state.categorized_files)
 
     def delete_selected_folder_and_contents(self, listWidget, treeWidget, excluded_tree=None):
         """
@@ -339,8 +339,8 @@ class SharedFileOrganizerModel:
         Parameters:
         selected_item (str): The folder path to be removed.
         """
-        if selected_item in self.categorized_files:
-            del self.categorized_files[selected_item]
+        if selected_item in self.state.categorized_files:
+            del self.state.categorized_files[selected_item]
 
     def refresh_list_widget(self, listWidget):
         # Clear the existing items in the list widget

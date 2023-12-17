@@ -40,7 +40,6 @@ class AutomatedFileOrganizerController:
     def get_included_tree(self, file_overview_tree):
         self.automated_model.get_included_tree(file_overview_tree)
 
-
     def load_toggle_state(self):
         return self.automated_model.load_toggle_state()
 
