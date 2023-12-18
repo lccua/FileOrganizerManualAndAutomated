@@ -36,11 +36,11 @@ class SharedFileOrganizerModel:
             return
 
         if self._is_folder_already_selected(folder_path):
-            self._show_warning("Folder Already Selected", "This folder has already been selected.")
+            self.show_warning("Folder Already Selected", "This folder has already been selected.")
             return
 
         if not self._has_files_with_extensions(folder_path):
-            self._show_warning("No Files with Extensions", "There are no files in this folder.")
+            self.show_warning("No Files with Extensions", "There are no files in this folder.")
             return
 
         self._add_folder_to_selected(folder_path)
@@ -98,7 +98,11 @@ class SharedFileOrganizerModel:
         else:
             self.group_files_by_category(treeWidget, self.state.selected_folder_paths_manual)
 
-    def _show_warning(self, title, message):
+
+
+
+
+    def show_warning(self, title, message):
         """
         Displays a warning message box.
 
@@ -241,7 +245,7 @@ class SharedFileOrganizerModel:
         :param excluded_tree: Tree widget containing excluded items (optional).
         """
         if not self.state.is_automated:
-            self._remove_unchecked_items(treeWidget)
+            self.manual_model.remove_unchecked_items_from_categorized_files(treeWidget)
 
         for folder_path, folders in self.state.categorized_files.items():
             for category, categories in folders.items():
@@ -250,15 +254,6 @@ class SharedFileOrganizerModel:
                                                      remove_duplicates_checkbox)
 
         self._refresh_ui(treeWidget, excluded_tree)
-
-    def _remove_unchecked_items(self, treeWidget):
-        """
-        Removes unchecked items from the categorized files if in manual mode.
-
-        :param treeWidget: The tree widget containing file information.
-        """
-        unchecked_items = self.manual_model.get_unchecked_items(treeWidget)
-        self.manual_model.remove_unchecked_items_from_categorized_files(self.state.categorized_files, unchecked_items)
 
     def _organize_files_in_category(self, folder_path, category, file_type, file_types, remove_duplicates_checkbox):
         """

@@ -17,6 +17,8 @@ class FileOrganizerStateManager:
 
             cls._instance.checked_items = {}
 
+            cls._instance.unchecked_items = []
+
             cls._instance.categorized_files = {}
             cls._instance.excluded_files = {}
 
