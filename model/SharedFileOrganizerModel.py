@@ -233,9 +233,6 @@ class SharedFileOrganizerModel:
 
         categorized_files[folder][category][file_extension].append(filename)
 
-
-
-
     def organize_chosen_files(self, treeWidget, remove_duplicates_checkbox, excluded_tree=None):
         """
         Organizes selected files based on their categories and optionally removes duplicates.
@@ -251,11 +248,16 @@ class SharedFileOrganizerModel:
             for category, categories in folders.items():
                 for file_type, file_types in categories.items():
                     self._organize_files_in_category(folder_path, category, file_type, file_types,
-                                                     remove_duplicates_checkbox)
+                                                     remove_duplicates_checkbox, check_duplicates=False)
+
+        if remove_duplicates_checkbox.isChecked():
+            for folder_path in self.state.categorized_files.keys():
+                self._find_and_delete_duplicate_files(folder_path)
 
         self._refresh_ui(treeWidget, excluded_tree)
 
-    def _organize_files_in_category(self, folder_path, category, file_type, file_types, remove_duplicates_checkbox):
+    def _organize_files_in_category(self, folder_path, category, file_type, file_types, remove_duplicates_checkbox,
+                                    check_duplicates=True):
         """
         Organizes files within a specific category and file type.
 
@@ -264,6 +266,7 @@ class SharedFileOrganizerModel:
         :param file_type: The type of the files.
         :param file_types: List of file types.
         :param remove_duplicates_checkbox: Checkbox indicating whether to remove duplicates.
+        :param check_duplicates: Boolean to control when to check for duplicates.
         """
         new_folder_path = os.path.join(folder_path, category, file_type[1:])
         os.makedirs(new_folder_path, exist_ok=True)
@@ -272,14 +275,14 @@ class SharedFileOrganizerModel:
             source_file = os.path.join(folder_path, file)
             destination_file = os.path.join(new_folder_path, file)
 
-            if remove_duplicates_checkbox.isChecked():
-                self._find_and_delete_duplicate_files(new_folder_path)
-
             try:
                 shutil.move(source_file, destination_file)
                 print(f"Moved '{file}' to '{destination_file}'")
             except Exception as e:
                 print(f"Error moving '{file}' to '{destination_file}': {e}")
+
+        if check_duplicates and remove_duplicates_checkbox.isChecked():
+            self._find_and_delete_duplicate_files(new_folder_path)
 
     def _find_and_delete_duplicate_files(self, directory):
         """
@@ -288,6 +291,9 @@ class SharedFileOrganizerModel:
         :param directory: The directory to search for duplicate files.
         """
         file_hashes = {}
+        files_to_delete = []
+
+        # First pass: identify duplicates
         for root, dirs, files in os.walk(directory):
             for filename in files:
                 file_path = os.path.join(root, filename)
@@ -295,10 +301,17 @@ class SharedFileOrganizerModel:
 
                 if file_hash in file_hashes:
                     print(f'Duplicate file found: {file_path} and {file_hashes[file_hash]}')
-                    os.remove(file_path)
-                    print(f'Deleted duplicate file: {file_path}')
+                    files_to_delete.append(file_path)
                 else:
                     file_hashes[file_hash] = file_path
+
+        # Second pass: delete duplicates
+        for file_path in files_to_delete:
+            try:
+                os.remove(file_path)
+                print(f'Deleted duplicate file: {file_path}')
+            except Exception as e:
+                print(f'Error deleting file {file_path}: {e}')
 
     @staticmethod
     def _calculate_file_hash(file_path, hash_function=hashlib.md5, buffer_size=65536):

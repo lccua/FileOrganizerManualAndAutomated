@@ -20,7 +20,7 @@ class ManualOrganizerView(QWidget):
         self.setWindowTitle('First Window')
 
         # Set the fixed size of the window
-        self.setFixedSize(852, 618)
+        self.setFixedSize(852, 540)
 
         # Create a horizontal layout widget for the main content
         self.horizontalLayoutWidget_3 = QtWidgets.QWidget(self)
@@ -55,10 +55,11 @@ class ManualOrganizerView(QWidget):
         self.excluded_items_button_layout.setObjectName("excluded_items_button_layout")
 
         # Create "Select All" button
-        self.select_all_button = QtWidgets.QPushButton(self.horizontalLayoutWidget_3)
-        self.select_all_button.setObjectName("select_all_button")
-        self.select_all_button.setText("Select All")
-        self.excluded_items_button_layout.addWidget(self.select_all_button)
+        self.organize_button = QtWidgets.QPushButton(self.horizontalLayoutWidget_3)
+        self.organize_button.setObjectName("organize_button")
+        self.organize_button.setText("Organize Files")
+        self.excluded_items_button_layout.addWidget(self.organize_button)
+
 
 
         # Add excluded items button layout to the main grid layout
@@ -103,12 +104,7 @@ class ManualOrganizerView(QWidget):
         # Add the main grid layout to the main horizontal layout
         self.main_horizontal_layout.addLayout(self.main_grid_layout)
 
-        # Create a horizontal line
-        self.line_2 = QtWidgets.QFrame(self)
-        self.line_2.setGeometry(QtCore.QRect(60, 510, 731, 20))
-        self.line_2.setFrameShape(QtWidgets.QFrame.HLine)
-        self.line_2.setFrameShadow(QtWidgets.QFrame.Sunken)
-        self.line_2.setObjectName("line_2")
+
 
         # Create a label for file overview
         self.file_overview_label = QtWidgets.QLabel(self)
@@ -136,25 +132,10 @@ class ManualOrganizerView(QWidget):
         self.folder_selector_label.setObjectName("folder_selector_label")
         self.folder_selector_label.setText("Folder Selector")
 
-        # Create a horizontal layout widget for automate buttons
-        self.horizontalLayoutWidget_4 = QtWidgets.QWidget(self)
-        self.horizontalLayoutWidget_4.setGeometry(QtCore.QRect(60, 550, 731, 31))
-        self.horizontalLayoutWidget_4.setObjectName("horizontalLayoutWidget_4")
-
-        # Create a horizontal layout for automate buttons
-        self.organize_button_layout = QtWidgets.QHBoxLayout(self.horizontalLayoutWidget_4)
-        self.organize_button_layout.setContentsMargins(230, 0, 230, 0)
-        self.organize_button_layout.setSpacing(0)
-        self.organize_button_layout.setObjectName("organize_button_layout")
-
-        # Create "Automate" button
-        self.organize_button = QtWidgets.QPushButton(self.horizontalLayoutWidget_4)
-        self.organize_button.setObjectName("organize_button")
-        self.organize_button.setText("Organize Files")
 
 
-        # Add automate button to the automate button layout
-        self.organize_button_layout.addWidget(self.organize_button)
+
+
 
         # Create a checkbox for removing duplicates
         self.remove_duplicates_checkbox = QtWidgets.QCheckBox(self)

@@ -81,6 +81,8 @@ class AutomatedOrganizerView(QWidget):
         self.main_horizontal_layout.setContentsMargins(50, 0, 50, 0)
         self.main_horizontal_layout.setObjectName("main_horizontal_layout")
 
+
+
         # Create a grid layout for the main container
         self.main_grid_layout = QtWidgets.QGridLayout()
         self.main_grid_layout.setHorizontalSpacing(111)
@@ -290,6 +292,8 @@ class AutomatedOrganizerView(QWidget):
         self.automate_label_layout.setSpacing(0)
         self.automate_label_layout.setObjectName("automate_label_layout")
         self.automate_label_layout.addWidget(self.automate_label)
+
+
 
 
     # button and event connection
