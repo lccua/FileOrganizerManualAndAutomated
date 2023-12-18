@@ -399,21 +399,23 @@ class AutomatedOrganizerView(QWidget):
             print("automation button toggled")
             self.controller.check_current_day(self.file_overview_tree, self.remove_duplicates_checkbox, self.excluded_items_tree)
 
-
     def create_day_checkboxes(self):
-        self.day_checkboxes_dict = {}
-        loaded_days = self.controller.load_selected_days()  # Load the saved states
+        # Load the saved states from JSON
+        loaded_days = self.controller.load_selected_days()
+
+        # Iterate through the DAYS constant and create checkboxes accordingly
         for day in DAYS:
             checkbox = QtWidgets.QCheckBox(day, self.days_checkboxes_container)
             checkbox.setObjectName(day)
             checkbox.setText(day)
             checkbox.stateChanged.connect(self.update_selected_days)
             self.days_checkboxes_layout.addWidget(checkbox)
-            self.day_checkboxes_dict[day] = checkbox
 
-            # Set the initial state of the checkbox from the loaded data
-            if day in loaded_days:
-                checkbox.setChecked(loaded_days[day])
+            # Set the initial state of the checkbox based on the loaded JSON data
+            checkbox.setChecked(loaded_days.get(day, False))
+
+            # Updating the dictionary to reference the checkbox object, not just the state
+            self.day_checkboxes_dict[day] = checkbox
 
     def set_automation_label_properties(self):
 

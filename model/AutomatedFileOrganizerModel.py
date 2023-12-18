@@ -373,7 +373,8 @@ class AutomatedFileOrganizerModel:
             self._write_json_file(day_states, 'checkbox_states.json')
 
     def load_selected_days(self):
-        return self._read_json_file('checkbox_states.json') or {}
+        self.state.day_checkboxes_dict = self._read_json_file('checkbox_states.json') or {}
+        return self.state.day_checkboxes_dict
 
     def save_toggle_state(self, is_toggled):
         self._write_json_file({"is_toggled": is_toggled}, "toggle_state.json")

@@ -233,6 +233,9 @@ class SharedFileOrganizerModel:
 
         categorized_files[folder][category][file_extension].append(filename)
 
+
+
+
     def organize_chosen_files(self, treeWidget, remove_duplicates_checkbox, excluded_tree=None):
         """
         Organizes selected files based on their categories and optionally removes duplicates.
@@ -392,6 +395,8 @@ class SharedFileOrganizerModel:
         if not self.state.is_browse_window:
             included_tree.clear()
             self.fill_tree_with_data(included_tree, self.state.categorized_files)
+
+
 
 
 
