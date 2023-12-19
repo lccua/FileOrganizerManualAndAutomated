@@ -352,11 +352,12 @@ class AutomatedFileOrganizerModel:
         json_string = "selected_folders_automated.json"
         folders = self._read_json_file(json_string)
 
-        existing_folders = [folder for folder in folders if os.path.exists(folder)]
-        self.state.selected_folder_paths_automated = existing_folders
+        if folders:
+            existing_folders = [folder for folder in folders if os.path.exists(folder)]
+            self.state.selected_folder_paths_automated = existing_folders
 
-        self.shared_model.refresh_list_widget(listWidget)
-        self.shared_model.update_tree_views_helper(self.state.included_tree, self.state.excluded_tree)
+            self.shared_model.refresh_list_widget(listWidget)
+            self.shared_model.update_tree_views_helper(self.state.included_tree, self.state.excluded_tree)
 
 
 
