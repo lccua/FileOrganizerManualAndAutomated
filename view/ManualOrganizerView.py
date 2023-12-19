@@ -134,9 +134,6 @@ class ManualOrganizerView(QWidget):
 
 
 
-
-
-
         # Create a checkbox for removing duplicates
         self.remove_duplicates_checkbox = QtWidgets.QCheckBox(self)
         self.remove_duplicates_checkbox.setGeometry(QtCore.QRect(363, 480, 151, 20))

@@ -39,7 +39,7 @@ class SharedFileOrganizerModel:
             self.show_warning("Folder Already Selected", "This folder has already been selected.")
             return
 
-        if not self._has_files_with_extensions(folder_path):
+        if not self._has_files_with_extensions(folder_path) and not self.state.is_automated:
             self.show_warning("No Files with Extensions", "There are no files in this folder.")
             return
 

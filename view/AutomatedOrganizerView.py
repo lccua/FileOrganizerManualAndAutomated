@@ -13,6 +13,8 @@ class AutomatedOrganizerView(QWidget):
         super().__init__()
         self.controller = AutomatedFileOrganizerController()
 
+
+
         # variables
         self.is_toggled = None
         self.is_toggled = self.controller.load_toggle_state()
@@ -23,6 +25,9 @@ class AutomatedOrganizerView(QWidget):
 
         # creates the layout
         self.create_layout()
+
+        self.controller.get_excluded_tree(self.excluded_items_tree)
+        self.controller.get_included_tree(self.file_overview_tree)
 
 
 
@@ -35,20 +40,19 @@ class AutomatedOrganizerView(QWidget):
             self.remove_duplicates_checkbox.setChecked(remove_duplicates_state)
 
 
-
-
+        self.controller.load_excluded_files(self.file_overview_tree, self.excluded_items_tree)
         self.controller.load_selected_folders(self.folder_selector_list)
 
-        self.controller.load_excluded_files(self.file_overview_tree, self.excluded_items_tree)
 
-        self.check_automation_toggle()
         self.create_day_checkboxes()
         self.set_automation_label_properties()
         self.set_automation_button_properties()
 
-        self.controller.get_excluded_tree(self.excluded_items_tree)
-        self.controller.get_included_tree(self.file_overview_tree)
 
+
+
+
+        self.check_automation_toggle()
 
 
         self.connect_signals()

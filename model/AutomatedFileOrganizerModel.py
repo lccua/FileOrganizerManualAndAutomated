@@ -286,10 +286,10 @@ class AutomatedFileOrganizerModel:
 
 
     def get_excluded_tree(self, tree):
-        self.excluded_tree = tree
+        self.state.excluded_tree = tree
 
     def get_included_tree(self, tree):
-        self.included_tree = tree
+        self.state.included_tree = tree
 
 
     """---- JSON ----"""
@@ -335,14 +335,14 @@ class AutomatedFileOrganizerModel:
         return self._read_pickle_file('remove_duplicates_state.pickle')
 
     def save_excluded_files(self):
-        if self.state.excluded_files:
-            self._write_json_file(self.state.excluded_files, "excluded_files.json")
+        self._write_json_file(self.state.excluded_files, "excluded_files.json")
 
     def load_excluded_files(self, included_tree, excluded_tree):
         excluded_files = self._read_json_file("excluded_files.json")
+
         if excluded_files:
             self.state.excluded_files = excluded_files
-            self.shared_model.update_tree_views_helper(included_tree, excluded_tree)
+
 
     def save_selected_folders(self):
         json_string = "selected_folders_automated.json"
@@ -351,26 +351,26 @@ class AutomatedFileOrganizerModel:
     def load_selected_folders(self, listWidget):
         json_string = "selected_folders_automated.json"
         folders = self._read_json_file(json_string)
-        if folders:
-            existing_folders = [folder for folder in folders if os.path.exists(folder)]
-            self.state.selected_folder_paths_automated = existing_folders
-            self._write_json_file(existing_folders, json_string)
-            self.shared_model.refresh_list_widget(listWidget)
+
+        existing_folders = [folder for folder in folders if os.path.exists(folder)]
+        self.state.selected_folder_paths_automated = existing_folders
+
+        self.shared_model.refresh_list_widget(listWidget)
+        self.shared_model.update_tree_views_helper(self.state.included_tree, self.state.excluded_tree)
+
+
 
     def save_checked_items(self):
-        if self.state.checked_items:
-            self._write_json_file(self.state.checked_items, "checked_items.json")
+        self._write_json_file(self.state.checked_items, "checked_items.json")
 
     def load_checked_items(self, treeWidget):
         checked_items = self._read_json_file("checked_items.json")
-        if checked_items:
-            self.state.checked_items = checked_items
-            self.check_saved_items(treeWidget)
+        self.state.checked_items = checked_items
+        self.check_saved_items(treeWidget)
 
     def save_selected_days(self, day_checkboxes_dict):
-        if day_checkboxes_dict:
-            day_states = {day: checkbox.isChecked() for day, checkbox in day_checkboxes_dict.items()}
-            self._write_json_file(day_states, 'checkbox_states.json')
+        day_states = {day: checkbox.isChecked() for day, checkbox in day_checkboxes_dict.items()}
+        self._write_json_file(day_states, 'checkbox_states.json')
 
     def load_selected_days(self):
         self.state.day_checkboxes_dict = self._read_json_file('checkbox_states.json') or {}
